@@ -4,8 +4,8 @@
  * serves exactly one file per client plugin, so no separate CSS artifact may
  * exist. Tokens come only from the shared `--dsw-alias-*` design platform
  * (no literal colors); class names carry the `dsh_atGh` prefix to stay
- * unique in the assembled shell. The tail of this sheet also overrides the
- * shared MenuView row layout for the github @ picker (see below).
+ * unique in the assembled shell. The picker popup styles are inline in
+ * picker.tsx; this sheet covers only the settings section.
  */
 
 /** Stable `<style>` element id (idempotent injection across HMR re-runs). */
@@ -25,41 +25,6 @@ export const cssText = `
   font-size: 18px;
   line-height: 26px;
   font-weight: 600;
-}
-.dsh_atGh_card {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  min-width: 0;
-  padding: 14px 16px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 12px;
-  background: var(--dsw-alias-bg-layer-1);
-  cursor: pointer;
-}
-.dsh_atGh_checkbox {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  margin: 2px 0 0;
-  accent-color: var(--dsw-alias-brand-primary);
-  cursor: pointer;
-}
-.dsh_atGh_cardText {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.dsh_atGh_cardTitle {
-  color: var(--dsw-alias-label-primary);
-  font-size: 14px;
-  line-height: 22px;
-}
-.dsh_atGh_cardDesc {
-  color: var(--dsw-alias-label-tertiary);
-  font-size: 13px;
-  line-height: 20px;
 }
 .dsh_atGh_field {
   display: flex;
@@ -177,23 +142,6 @@ export const cssText = `
   font-size: 12px;
   line-height: 18px;
   margin-top: -4px;
-}
-/* The shared MenuView caps the candidate name (the title) at
-   flex:none + max-width:40% and gives the description (the #number tag) the
-   flex:1 slack — the opposite of what a GitHub row needs. Override it for
-   the github rows only: the row button carries the stable framework id
-   dsh-slash-option-github-{index} (the source-name segment), and the
-   CSS-module class suffixes (_itemName, _itemDescription) survive the
-   hash prefix. The slash menu and every other @ source keep the framework
-   layout. The number tag then shrinks to its content and the title flexes
-   into the freed space, ellipsizing only at the row end. */
-[id^="dsh-slash-option-github-"] [class$="_itemName"] {
-  flex: 1 1 auto;
-  min-width: 0;
-  max-width: none;
-}
-[id^="dsh-slash-option-github-"] [class$="_itemDescription"] {
-  flex: none;
 }
 `
 

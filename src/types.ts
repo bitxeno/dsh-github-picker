@@ -1,7 +1,3 @@
-/**
- * Resolved plugin configuration: schema defaults applied at load time.
- */
-
 /** The Loader-facing config shape (schema defaults not yet applied). */
 export interface ConfigInput {
   defaultLimit?: number

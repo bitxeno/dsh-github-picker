@@ -43,7 +43,7 @@ function settingsProvider(read: () => GhIssueSettings) {
 
 /** Default settings the tests start from. */
 function defaultSettings(): GhIssueSettings {
-  return { enabled: true, insertFormat: 'ref' }
+  return { insertFormat: 'ref' }
 }
 
 /** Mount the function-plugin module on a fresh context (harness test pattern). */
@@ -118,8 +118,8 @@ describe('dsh-github-picker host composition', () => {
     const { fiber, service } = await mount(ctx)
     const original = service as unknown as GhIssueRuntime
     expect(original.getSettings()).toEqual(defaultSettings())
-    await original.updateSettings({ field: 'enabled', value: false })
-    expect(original.getSettings().enabled).toBe(false)
+    await original.updateSettings({ field: 'insertFormat', value: 'url' })
+    expect(original.getSettings().insertFormat).toBe('url')
     await fiber.dispose()
   })
 
@@ -138,15 +138,6 @@ describe('dsh-github-picker host composition', () => {
     const original = service as unknown as GhIssueRuntime
     const signal = new AbortController().signal
     await expect(original.search('bug', agentWith(undefined), signal)).rejects.toThrow(/no workspace directory/)
-    await fiber.dispose()
-  })
-
-  it('refuses search while the surface is disabled', async () => {
-    const ctx = new Context()
-    const { fiber, service } = await mount(ctx, undefined, () => ({ ...defaultSettings(), enabled: false }))
-    const original = service as unknown as GhIssueRuntime
-    const signal = new AbortController().signal
-    await expect(original.search('', agentWith('/tmp'), signal)).rejects.toThrow(/disabled in Settings/)
     await fiber.dispose()
   })
 
@@ -169,7 +160,7 @@ describe('dsh-github-picker host composition', () => {
   })
 
   it('searches through the gh provider, resolving the repo from git', async () => {
-    // The repo now always comes from `git remote get-url origin`; return it
+    // The repo always comes from `git remote get-url origin`; return it
     // before the gh search subprocess runs.
     execMock.mockImplementation((file, _args, _options, callback) => {
       if (file === 'git') {

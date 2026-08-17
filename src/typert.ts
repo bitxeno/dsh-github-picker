@@ -21,7 +21,7 @@ export const TYPERT_MANIFEST: TypertContribution = {
       {
         key: 'ghIssue',
         exportName: 'GhIssueRuntime',
-        description: 'GitHub issue/PR search (gh CLI), durable settings, and gh account status for the @ picker.',
+        description: 'GitHub issue/PR search (gh CLI), durable settings (insert format), and gh account status for the composer picker.',
         tags: [],
         members: [
           {

@@ -1,5 +1,5 @@
 /**
- * GitHub-style state icons for the @ menu candidates, matching the octicon
+ * GitHub-style state icons for the picker popup rows, matching the octicon
  * glyphs GitHub shows in issue/PR lists:
  *
  *   open issue    – issue-opened            green

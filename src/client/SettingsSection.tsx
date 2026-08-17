@@ -1,9 +1,10 @@
 /**
- * The settings page section for dsh-github-picker: enable switch, insert format,
- * and the gh CLI account-connection status card. Reads and writes go through
- * the plugin-owned settings snapshot and the Remote updateSettings path —
- * the public DSH package does not expose the gh-issue namespace to the
- * browser. All dsh imports are type-only.
+ * The settings page section for dsh-github-picker: the insert format and the
+ * gh CLI account-connection status card. Reads and writes go through the
+ * plugin-owned settings snapshot and the Remote updateSettings path — the
+ * public DSH package does not expose the gh-issue namespace to the browser.
+ * There is no enable switch: the picker is always on. All dsh imports are
+ * type-only.
  */
 import { useEffect, useState } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
@@ -71,20 +72,7 @@ export function GhIssueSection({ useSettings, update, getGhAuthStatus, t }: Sett
   return (
     <section className="dsh_atGh_section" aria-labelledby="dsh-github-picker-settings-title">
       <h2 id="dsh-github-picker-settings-title" className="dsh_atGh_title">{t('settings.title')}</h2>
-      <label className="dsh_atGh_card">
-        <input
-          type="checkbox"
-          className="dsh_atGh_checkbox"
-          checked={settings.enabled}
-          onChange={event => { void setField({ field: 'enabled', value: event.target.checked }) }}
-        />
-        <span className="dsh_atGh_cardText">
-          <span className="dsh_atGh_cardTitle">{t('settings.enabled')}</span>
-          <span className="dsh_atGh_cardDesc">{t('settings.enabledDesc')}</span>
-        </span>
-      </label>
-      {/* The GitHub-branded connection card (github ↔ gh CLI ↔ Connected),
-          placed directly below the enable toggle. */}
+      {/* The GitHub-branded connection card (github ↔ gh CLI ↔ Connected). */}
       <div className="dsh_atGh_connCard">
         <span className="dsh_atGh_connMark"><GitHubMarkIcon /></span>
         <span className="dsh_atGh_connBody">

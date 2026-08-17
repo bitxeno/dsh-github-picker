@@ -1,28 +1,27 @@
 /**
- * `gh-issue` locale namespace: the # picker menu, the referenced-issue dock,
- * and the settings section copy. Chinese is the product copy; English
- * mirrors it.
+ * `gh-issue` locale namespace: the composer picker button and popup copy
+ * (search, loading, empty, the localized failure hint rows) plus the
+ * settings section copy (title, insert format, the gh account-connection
+ * card). Chinese is the product copy; English mirrors it. There is no enable
+ * switch — the picker is always on.
  */
 
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
-  'nav': 'GitHub 提及',
-  'menu.aria': 'GitHub Issue 与 Pull Request 选择器',
-  'menu.repo': '仓库',
-  'menu.loading': '正在搜索…',
-  'menu.empty': '没有匹配的 Issue 或 PR',
-  'menu.error': '搜索失败',
-  'menu.error.gh-missing': '未找到 gh 命令行工具，请安装 gh 并登录（gh auth login）。',
-  'menu.error.not-authenticated': 'gh 未登录（运行 gh auth login）。',
-  'menu.error.rate-limited': 'GitHub 接口限流，请稍后再试。',
-  'menu.error.network': '网络错误，请检查连接后重试。',
-  'menu.error.repo-not-found': '未找到该仓库，请检查设置中的仓库地址。',
-  'menu.error.unknown': '搜索失败，请重试。',
-  'menu.no-repo': '未检测到 GitHub 仓库：请在设置中配置仓库地址，或为工作区添加 git remote。',
-  'settings.title': 'GitHub 提及',
-  'settings.subtitle': '在输入框输入 @ 搜索并引用当前工作区仓库的 Issue 与 Pull Request；仓库自动读取 git remote，数据来自 gh CLI，插件只传递编号，不拉取正文。',
-  'settings.enabled': '启用 @ GitHub 提及',
-  'settings.enabledDesc': '关闭后隐藏 @ 选择器，并停止向模型标记所选编号。',
+  'nav': 'GitHub 引用',
+  'picker.open': '选择 GitHub Issue 或 PR',
+  'picker.search': '搜索 Issue 或 PR…',
+  'picker.loading': '正在搜索…',
+  'picker.empty': '没有匹配的 Issue 或 PR',
+  'picker.no-repo': '未检测到 GitHub 仓库：请为工作区添加 git remote。',
+  'picker.error.gh-missing': '未找到 gh 命令行工具，请安装 gh 并登录（gh auth login）。',
+  'picker.error.not-authenticated': 'gh 未登录（运行 gh auth login）。',
+  'picker.error.rate-limited': 'GitHub 接口限流，请稍后再试。',
+  'picker.error.network': '网络错误，请检查连接后重试。',
+  'picker.error.repo-not-found': '未找到该仓库，请检查仓库地址。',
+  'picker.error.unknown': '搜索失败，请重试。',
+  'settings.title': 'GitHub 引用',
+  'settings.subtitle': '点击输入框右下角的 GitHub 图标，搜索并引用当前工作区仓库的 Issue 与 Pull Request；仓库自动读取 git remote，数据来自 gh CLI，插件只传递编号，不拉取正文。',
   'settings.insertFormat': '插入格式',
   'settings.insertFormat.url': 'GitHub URL',
   'settings.insertFormat.ref': '@owner/repo#编号（默认）',
@@ -44,23 +43,20 @@ export type GhIssueKey = keyof typeof zh
 
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
-  'nav': 'GitHub mentions',
-  'menu.aria': 'GitHub issue and pull request picker',
-  'menu.repo': 'Repository',
-  'menu.loading': 'Searching…',
-  'menu.empty': 'No matching issues or PRs',
-  'menu.error': 'Search failed',
-  'menu.error.gh-missing': 'The gh CLI is not installed. Install it and sign in (gh auth login).',
-  'menu.error.not-authenticated': 'gh is not logged in (run gh auth login).',
-  'menu.error.rate-limited': 'GitHub API rate limit exceeded; try again later.',
-  'menu.error.network': 'Network error; check the connection and retry.',
-  'menu.error.repo-not-found': 'Repository not found; check the repository setting.',
-  'menu.error.unknown': 'Search failed; try again.',
-  'menu.no-repo': 'No GitHub repository detected: set one in Settings or add a git remote to the workspace.',
-  'settings.title': 'GitHub mentions',
-  'settings.subtitle': 'Type @ to search and reference issues and pull requests of the current workspace repository; the repository is read from the git remote, data comes from the gh CLI, and the plugin passes the number only, never the body.',
-  'settings.enabled': 'Enable @ GitHub mentions',
-  'settings.enabledDesc': 'Turning this off hides the @ picker and stops marking selected numbers for the model.',
+  'nav': 'GitHub Picker',
+  'picker.open': 'Pick a GitHub issue or pull request',
+  'picker.search': 'Search issues or PRs…',
+  'picker.loading': 'Searching…',
+  'picker.empty': 'No matching issues or PRs',
+  'picker.no-repo': 'No GitHub repository detected: add a git remote to the workspace.',
+  'picker.error.gh-missing': 'The gh CLI is not installed. Install it and sign in (gh auth login).',
+  'picker.error.not-authenticated': 'gh is not logged in (run gh auth login).',
+  'picker.error.rate-limited': 'GitHub API rate limit exceeded; try again later.',
+  'picker.error.network': 'Network error; check the connection and retry.',
+  'picker.error.repo-not-found': 'Repository not found; check the repository address.',
+  'picker.error.unknown': 'Search failed; try again.',
+  'settings.title': 'GitHub Picker',
+  'settings.subtitle': 'Click the GitHub icon at the bottom-right of the input box to search and reference issues and pull requests of the current workspace repository; the repository is read from the git remote, data comes from the gh CLI, and the plugin passes the number only, never the body.',
   'settings.insertFormat': 'Insert format',
   'settings.insertFormat.url': 'GitHub URL',
   'settings.insertFormat.ref': '@owner/repo#number (default)',
@@ -93,7 +89,7 @@ export function fmt(template: string, params?: Record<string, string>): string {
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
-    /** The # reference, dock, and settings copy. */
+    /** The composer picker and settings copy. */
     [NS]: GhIssueKey
   }
 }

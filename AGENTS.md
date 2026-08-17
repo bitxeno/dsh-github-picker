@@ -11,42 +11,50 @@ level).
 
 ```
 src/index.ts        host entry: function plugin (name/inject/Config/apply, no default export)
-src/runtime.ts      GhIssueRuntime (TypertRemoteService, @Remote search/settings/gh-auth) — wire namespace `ghIssue`
+src/runtime.ts      GhIssueRuntime (TypertRemoteService, @Remote search/getSettings/
+                    updateSettings/getGhAuthStatus) — wire namespace `ghIssue`
 src/mention.ts      Host pre-step scanner: URLs, @owner/repo#number, and bare #number
                     → <github-reference> markers (source `gh-issue-mention`)
-src/contract.ts     one shared descriptor set + zod codecs + entry/settings/auth-status types
-src/gh-auth.ts      reads `gh auth status --json hosts` → the account-connection status (no token material)
+src/contract.ts     one shared descriptor set + zod codecs + entry/config types
 src/typert.ts       strict host Typert manifest, registered via ctx.typert.register
-src/settings.ts     the `gh-issue` settings namespace (enable, insertFormat defaulting to 'ref')
+src/settings.ts     the `gh-issue` settings namespace (insert format only; no enable
+                    switch — the picker is always on)
+src/gh-auth.ts      reads `gh auth status --json hosts` → the account-connection status (no token material)
 src/repo.ts         git remote URL parsing (https/ssh/git@ forms) + per-workspace TTL cache
 src/providers/      SearchProvider seam: gh.ts only (gh api search/issues, NDJSON). No device flow,
                     no REST-API mode, no token store, no repository override.
 src/invariant.ts    ./invariant companion (real `No runtime invariant:` reason)
 src/client/         browser half, served as the single file /plugins/dsh-github-picker/client.js
-  index.ts          apply: $mount the Remote contribution, per-session cache, the standard
-                    `@` source registry, settings section, locale, styles
-  source.ts         the standard `@` InputTriggerSource (SOURCE_NAME 'github', order 20):
-                    candidates from the host search, pick text by insertFormat,
-                    failure hint row (localized, unpickable)
+  index.ts          apply: $mount the Remote contribution, per-session cache, the composer
+                    slot registration, locale, styles, the settings.section registration
+  picker.tsx        the composer control for `conversation.input.right` (list slot, id
+                    'gh-issue-picker', order 100): a GitHub-mark button whose popup is a
+                    plain sibling (absolute, bottom: calc(100% + 8px), right: 0). Opens a
+                    searchable list from the host search, filters locally via search.ts,
+                    inserts via inputActions.setDraft, failure hint row (localized, unpickable)
+  SettingsSection.tsx  settings.section (id 'github-settings', order 55): the gh connection
+                    card (via gh CLI) + the insert-format select. No enable switch.
+  styles.ts         settings-section stylesheet (`--dsw-alias-*` tokens, `dsh_atGh` prefix);
+                    the picker popup styles are inline in picker.tsx
+  remote.ts         the shared-descriptors client contribution for ctx.remote.$mount
   search.ts         pure ranking (number exact/prefix > title contains/prefix) +
                     classifySearchError (wire failure → hint kind, message-based)
   cache.ts          per-session result cache (TTL, shared in-flight, superseded-signal yield)
   icons.tsx         GitHub octicon set: issue open/closed, PR open/draft/closed/merged,
-                    alert (hint row), GitHub mark (connection card); the icon field carries a React element
-  SettingsSection.tsx  GitHub-branded connection card (via gh CLI), enable switch, insert format (ref first)
-  locales.ts        zh (product copy) / en dictionaries, NS = 'gh-issue' (includes menu.error.* hint copy)
-  styles.ts         single injected stylesheet (--dsw-alias-* tokens, dsh_atGh prefix) +
-                    the MenuView row-flex override scoped to the github rows
+                    alert (hint row), and the GitHub mark (connection card + the composer button)
+  locales.ts        zh (product copy) / en dictionaries, NS = 'gh-issue'. Picker error copy
+                    (`picker.error.*`) + settings copy (title 'GitHub 引用', insert format,
+                    auth status) — no enable-switch keys.
 tests/              node-env specs (11 files); jsdom pragma where a browser API is needed
 ```
 
 ## Contracts with the harness (do not drift)
 
 - The wire endpoints are `ghIssue/search`, `ghIssue/getSettings`,
-  `ghIssue/updateSettings`, and `ghIssue/getGhAuthStatus`. Search results
-  and the gh account-connection status cross the wire; no token material
-  ever does — the plugin only reads `gh auth status` facts and never stores
-  any credential.
+  `ghIssue/updateSettings`, and `ghIssue/getGhAuthStatus`. Search results,
+  the settings section (insert format), and the gh account-connection status
+  cross the wire; no token material ever does — the plugin only reads `gh
+  auth status` facts and never stores any credential.
 - The Host Gateway resolves the endpoint through the **strict Typert manifest**
   (`src/typert.ts`, registered via `ctx.typert.register`) — never through
   `@Remote` marker tables, because the harness's source-launch dev
@@ -56,41 +64,40 @@ tests/              node-env specs (11 files); jsdom pragma where a browser API 
 - The descriptor set lives in `src/contract.ts` and is shared verbatim by the
   host manifest and the client contribution; the agent lookup codec's
   `typeSymbol` must stay `@deepseek-ai/dsh-session/types#SessionId`.
+- The plugin registers the `gh-issue` namespace through `ctx.settings.register`
+  — **no enable switch exists, the picker is always on** and the namespace
+  holds only `insertFormat`. The public DSH package does not expose that
+  namespace through `WEB_SETTINGS_NAMESPACES`; browser reads and writes MUST
+  use `ghIssue/getSettings` and `ghIssue/updateSettings` (the Host methods own
+  normalization and call the owner settings scope).
 - The client composes only through the standing seams (`ctx.remote.$mount`,
-  `ctx.slots.register`, `ctx.locale.register`, `ctx.get('inputTriggers')`).
-  The mounted Remote namespace is resolved through
+  `ctx.slots.register`, `ctx.locale.register`). The mounted Remote namespace
+  is resolved through
   `ctx.reflect.get('remote.ghIssue')` — NOT the dotted `ctx.remote.ghIssue`
   read, which walks the fiber chain and stops at the Loader's runtime-less
   forks.
-- **The plugin is a STANDARD `@` input-trigger source** (the pipeline only
-  scans `/` and `@`; `TriggerChar = '/' | '@'` is frozen). There is no custom
-  `#` trigger, overlay, keyboard capture, or dock anymore — earlier versions
-  implemented `#` inside the plugin and those files (trigger/keyboard/
-  menu-state/menu/dock/position) were deleted in the `@` refactor. Do not
-  reintroduce them; if a `#`-only gesture is ever needed again, it must be a
-  separate decision documented in `docs/plan/`.
-- The framework's MenuView renders every trigger menu. When a source's
-  `candidates()` rejects, the framework **silently removes the group** (and
-  auto-closes the menu when no groups remain) — so the source catches its own
-  search failures and returns one unpickable hint row (`ghError: true`)
-  instead, keeping the menu open with a localized explanation.
-- The MenuView caps the candidate `name` at `flex:none; max-width:40%` (the
-  CSS-module classes are hashed but the suffixes `_itemName`/`_itemDescription`
-  are stable). `styles.ts` overrides the row layout **only for the github
-  rows**, scoped by the stable row id prefix `dsh-slash-option-github-` (the
-  framework builds option ids as `dsh-slash-option-${source}-${index}`): name
-  becomes `flex:1; max-width:none` and description `flex:none`, so the title
-  flexes and the `#number` shrinks. The slash menu and other `@` sources keep
-  the framework layout. If the source name changes, update the selector.
+- **The picker is a plain component in the `conversation.input.right` list
+  slot** (the seat just before the send button), mounted with
+  `ctx.slots.inject('conversation.input.right', () => ctx.slots.register(...))`
+  inside an effect that returns the disposer — the reference dsh-skill-picker
+  recipe. It receives the owner InputZone (`session`, `input`), the session
+  kit (`useInput`, `inputActions`), its inject face (`search` + the bound
+  `useSettings` hooks seat), and the locale `t`. The popup is a plain sibling
+  of the button (`position:absolute; bottom: calc(100% + 8px); right: 0`),
+  no portal; drafts are written ONLY through `inputActions.setDraft` (full
+  next draft), never by touching the textarea DOM. Do not reintroduce
+  trigger/overlay/keyboard-capture machinery — earlier versions implemented a
+  custom `#` trigger and the standard `@` source; those files (trigger/
+  keyboard/menu-state/menu/dock/position/source.ts) were deleted in the
+  composer-slot refactor.
+- The popup loads the recent list once per open (query `''`, cached per
+  session with a 30s TTL) and filters locally via `rankEntries`, so typing
+  never stacks provider calls. A search failure is classified by
+  `classifySearchError` and rendered as one localized, unpickable hint row.
 - The mention grammar (bare `#number`, `@owner/repo#number`, and issue/PR
   URLs) is scanned by the host's `scanMentions`; the picker's inserted text
   must stay within those three forms so the pre-step always marks picks.
-  Keep `src/mention.ts` and `src/client/source.ts` in sync.
-- The plugin registers the `gh-issue` namespace through `ctx.settings.register`,
-  but the public DSH package does not expose that namespace through
-  `WEB_SETTINGS_NAMESPACES`. Browser reads and writes MUST use
-  `ghIssue/getSettings` and `ghIssue/updateSettings`; the Host methods own
-  normalization and call the owner settings scope.
+  Keep `src/mention.ts` and `src/client/picker.tsx` (`pickText`) in sync.
 - The web server serves exactly one file per client plugin: keep the client
   bundle single-file; styles are the injected `styles.ts` string (no CSS
   artifacts). `lib/` is committed; the profile install

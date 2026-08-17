@@ -1,6 +1,6 @@
 # dsh-github-picker
 
-GitHub issue and pull request references for the DeepSeek Harness web GUI. Type `@` in the composer to search the current workspace repository and insert a reference — a GitHub URL, or an `@owner/repo#number` mention — with the same autocomplete gesture GitHub uses in its own editors.
+GitHub issue and pull request references for the DeepSeek Harness web GUI. Click the GitHub icon at the bottom-right of the input box (the composer's tool row, next to the send button) to open a searchable list of the current workspace repository's issues and pull requests, and insert a reference — a GitHub URL, or an `@owner/repo#number` mention.
 
 ![dsh-github-picker in the DeepSeek Harness web GUI](docs/image/preview.jpeg)
 
@@ -17,7 +17,7 @@ To pin a specific release instead, swap `refs/heads/main` for the tag ref, e.g. 
 
 ## Usage
 
-Type `@` in the composer. The standard trigger menu appears with the repository's recent issues and pull requests, grouped under the **github** header; keep typing to filter by number or title. Arrow keys navigate, Enter (or a click) picks, Escape closes. A search failure (gh CLI missing, not authenticated, rate limited, network error, unresolved repository) renders as one hint row instead of silently closing the menu.
+Click the GitHub icon at the bottom-right of the input box. A searchable popup opens with the repository's recent issues and pull requests; keep typing in its search field to filter by number or title (a number prefix ranks first, like GitHub's own autocomplete). Click a row (or press Enter with the field focused and a row picked via click) to insert the reference; Escape or a click anywhere outside closes the popup. A search failure (gh CLI missing, not authenticated, rate limited, network error, unresolved repository) renders as one localized hint row instead of a silent close.
 
 Each row shows GitHub's own state icon, the title, and the `#number` tag:
 
@@ -49,15 +49,16 @@ The plugin passes the repository and number only — it never fetches issue bodi
 
 The plugin uses the **gh CLI** exclusively — reuse the local `gh` login and call `gh api search/issues`, which returns issues and pull requests in one query. No device flow, OAuth app, or stored credential is involved; the settings page shows the gh connection status (which accounts `gh auth status` reports). `gh` CLI works on macOS, Linux, and Windows.
 
-The repository is always resolved from the workspace `git remote get-url origin` (https, ssh, and `git@` forms); without a resolvable repository the `@` menu shows a hint row explaining how to add a remote.
+The repository is always resolved from the workspace `git remote get-url origin` (https, ssh, and `git@` forms); without a resolvable repository the popup shows a hint row explaining how to add a remote.
 
 ## Settings
 
-Open **Settings -> GitHub 提及** to configure:
+Open **Settings -> GitHub 引用** to configure:
 
-- **Connection card** — the gh CLI connection status: a GitHub-marked card showing "GitHub **via gh CLI**" with a **Connected** (green) or **Not connected** pill and the logged-in accounts (active marked `*`).
-- **Enable** — turns the `@` surface on and off.
+- **Connection card** — the gh CLI connection status: a GitHub-marked card showing "GitHub **via gh CLI**" with a **Connected** (green) or **Not connected** pill.
 - **Insert format** — `@owner/repo#number` (default) or `GitHub URL` for the picked text.
+
+There is no enable switch: the picker is always available in the composer.
 
 ## Configuration
 
@@ -75,13 +76,15 @@ Host plugin configuration goes into the selected profile's `cordis.patch.yml`:
 - `searchTimeoutMs` bounds provider calls (default 15000).
 - `repoCacheTtl` caches the resolved repository per workspace (default 30000 ms).
 
+A Host config change needs a `dsh web` restart; a pure client change only needs a browser refresh.
+
 ## Notes
 
-- The plugin is a **standard `@` input-trigger source** (source name `github`, ordered after dsh-at-file) on the framework-owned MenuView. No custom `#` trigger, overlay, keyboard handling, or dock exists — everything the standard pipeline provides is reused.
-- The shared MenuView caps the candidate name at `flex:none; max-width:40%`; the plugin's injected stylesheet overrides the row layout for the `github` rows only (scoped by the stable option id prefix `dsh-slash-option-github-`), so the title flexes into the row and the `#number` tag shrinks to its content. The slash menu and other `@` sources keep the framework layout.
-- Search results are cached per session for 30 seconds; a fast typer never stacks provider calls.
+- The picker is a component in the framework's `conversation.input.right` composer slot (the seat just before the send button), the same seam the reference dsh-skill-picker uses: an icon button whose popup is a plain sibling positioned `absolute; bottom: calc(100% + 8px); right: 0` inside a relative wrapper. No custom trigger, overlay, or keyboard capture exists.
+- Picking writes the full next draft through the framework input machine (`inputActions.setDraft`), so undo history and the Host's mention scanning work automatically.
+- The popup loads the recent issue/PR list once per open (cached per session for 30 seconds; reopening is instant within the TTL and refetches after it) and filters locally per keystroke, so typing never stacks provider calls.
 - The `#number` / URL / `@owner/repo#number` mention grammar is shared by the Host's pre-step scanner (`scanMentions`) and the picker's inserted text; keep them in sync when changing either.
-- A search failure is classified and rendered in the menu as one localized hint row (see the `menu.error.*` copy in `src/client/locales.ts`), so "gh is not installed" is visible instead of a silent close.
+- A search failure is classified and rendered in the popup as one localized hint row (see the `picker.error.*` copy in `src/client/locales.ts`), so "gh is not installed" is visible instead of a silent close.
 
 ## Development
 

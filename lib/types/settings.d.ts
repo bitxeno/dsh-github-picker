@@ -1,10 +1,11 @@
 /**
- * The `gh-issue` settings namespace: the durable enable switch and insert
- * format managed from the Web settings page. Registered with the settings
- * provider at plugin load; the runtime reads the owner scope's live value on
- * every call, so changes take effect without a restart. The data source is
- * always the gh CLI and the repository always resolves from the workspace
- * git remote — there is no device flow, no stored token, no override field.
+ * The `gh-issue` settings namespace: the durable insert format managed from
+ * the Web settings page. Registered with the settings provider at plugin
+ * load; the runtime reads the owner scope's live value on every call, so a
+ * change takes effect without a restart. There is no enable switch — the
+ * picker is always on. The data source is always the gh CLI and the
+ * repository always resolves from the workspace git remote — there is no
+ * device flow, no stored token, no override field.
  */
 import type { Context } from '@deepseek-ai/cordis';
 import z from '@deepseek-ai/schemastery';

@@ -92,18 +92,16 @@ function referenceForm(owner: string, name: string, number: number): string {
 /**
  * Expand every GitHub reference into a marker, in first-seen order. A bare
  * `#number` token resolves against the workspace repo; URL and
- * `@owner/repo#number` forms carry their own repository.
+ * `@owner/repo#number` forms carry their own repository. The plugin has no
+ * enable switch — references are always marked.
  * @param messages - the assembled step messages.
  * @param repo - the workspace repository identity (undefined = no bare-# resolution).
- * @param isEnabled - live settings read.
- * @returns the injected user messages (empty when nothing matched or disabled).
+ * @returns the injected user messages (empty when nothing matched).
  */
 export function expandMentions(
   messages: readonly UserMessage[],
   repo: GitHubRepoRef | undefined,
-  isEnabled: boolean,
 ): UserMessage[] {
-  if (!isEnabled) return []
   const mentions: Mention[] = []
   for (const message of messages) {
     if (message.source.kind !== USER_SOURCE_KIND) continue
@@ -137,8 +135,6 @@ export interface MentionRepoResolver {
  * messages and append the injections to the downstream decision. The repo is
  * resolved once per step (cached host-side by the resolver).
  * @param agent - the addressed agent (its session header owns the cwd).
- * @param isEnabled - live settings read.
- * @param repoOverride - the settings repository override.
  * @param resolver - the repository resolver seam.
  * @param messages - the claimed messages (the user's own words).
  * @param signal - caller lifetime.
@@ -147,8 +143,6 @@ export interface MentionRepoResolver {
  */
 export async function mentionPreStep(
   agent: MentionAgent,
-  isEnabled: () => boolean,
-  repoOverride: () => string,
   resolver: MentionRepoResolver,
   messages: readonly UserMessage[],
   signal: AbortSignal,
@@ -156,11 +150,10 @@ export async function mentionPreStep(
 ): Promise<PreStepDecision> {
   const decision = await next()
   if (decision.kind === 'reject') return decision
-  if (!isEnabled()) return decision
   const cwd = agent.session.header.cwd
   if (cwd === undefined) return decision
-  const repo = await resolver.resolve(cwd, repoOverride(), signal)
-  const injections = expandMentions(messages, repo, true)
+  const repo = await resolver.resolve(cwd, '', signal)
+  const injections = expandMentions(messages, repo)
   if (injections.length === 0) return decision
   return { kind: 'enter', messages: [...decision.messages, ...injections] }
 }

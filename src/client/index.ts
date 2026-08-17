@@ -1,12 +1,13 @@
 /**
- * dsh-github-picker client plugin: the browser half of the GitHub @ mention.
- * Mounts the ghIssue Remote namespace and registers a STANDARD
- * input-trigger source under `@` (sharing the trigger with dsh-at-file's
- * path picker — the pipeline groups sources by trigger). Trigger detection,
- * the grouped menu, keyboard navigation, and per-session wiring are all
- * framework-owned; the plugin only supplies candidates (the host search
- * through a per-session cache) and the pick text (the configured insert
- * format). The Host owns all data access.
+ * dsh-github-picker client plugin: the browser half of the GitHub picker.
+ * Mounts the ghIssue Remote namespace, the settings section, and the composer
+ * control — a GitHub-mark button in the input box's right tool row
+ * (`conversation.input.right` list slot, the seat next to the send button).
+ * Clicking it opens a searchable popup of the workspace repository's issues
+ * and pull requests; picking inserts the configured reference text through
+ * the framework input machine. The settings page manages the insert format
+ * (there is no enable switch — the picker is always on); the Host owns all
+ * data access.
  */
 // Type-only: the ctx.remote merge and the forwarded Host-event face.
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
@@ -16,18 +17,17 @@ import type { ClientContext, SessionId } from '@deepseek-ai/dsh-client-runtime/c
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 // Type-only: brings the settings.section SlotMap declaration into this program.
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
-import type { InputTriggerServiceContract } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import { GH_ISSUE_REMOTE } from './remote.ts'
 import { HashCache } from './cache.ts'
-import { createGhSource } from './source.ts'
 import { classifySearchError, type SearchErrorKind } from './search.ts'
+import { GhIssuePickerButton, type PickerInjected } from './picker.tsx'
 import { GhIssueSection, type SettingsSectionInjected } from './SettingsSection.tsx'
 import { NS, zh, en } from './locales.ts'
 import { adoptStyles } from './styles.ts'
 import type { GhAuthStatus, GhIssueSettings, GhIssueSettingsUpdate, GitHubSearchResult } from '../contract.ts'
 
-/** Required services: input triggers (source roster), Remote face, slots, and locale. */
-export const inject = ['inputTriggers', 'remote', 'slots', 'locale']
+/** Required services: the Remote face, the slot registry, and locale. */
+export const inject = ['remote', 'slots', 'locale']
 
 /** The mounted ghIssue namespace service's callable face. */
 interface GhIssueFace {
@@ -43,7 +43,7 @@ function wireErrorKind(code: string, message: string): SearchErrorKind {
 }
 
 /**
- * Compose the GitHub @ mention surface.
+ * Compose the GitHub picker surface.
  * @param ctx - client root context.
  */
 export function apply(ctx: ClientContext): void {
@@ -52,7 +52,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-github-picker: dictionaries')
 
   // The plugin's own settings snapshot (loaded from the Host on mount).
-  let settings: GhIssueSettings = { enabled: true, insertFormat: 'ref' }
+  let settings: GhIssueSettings = { insertFormat: 'ref' }
   const settingsListeners = new Set<() => void>()
   const notifySettings = (): void => {
     for (const listener of [...settingsListeners]) listener()
@@ -94,21 +94,8 @@ export function apply(ctx: ClientContext): void {
     return result.value
   })
 
-  // The standard `@` source: candidates come from the host search, the pick
-  // text follows the configured insert format. The pipeline owns the menu.
-  const inputTriggers = ctx.get('inputTriggers') as InputTriggerServiceContract
-  ctx.effect(() => {
-    const dispose = inputTriggers.registerSource(createGhSource({
-      search: (query, sessionId, signal) => cache.resolve(query, sessionId, signal),
-      settings: () => settings,
-      t,
-    }))
-    return dispose
-  }, 'dsh-github-picker: @ source')
-
-  // The settings section: enable, insert format, and the gh account-connection
-  // status card. The repository is always resolved from the workspace git
-  // remote — no override field.
+  // The shared settings snapshot (one source of truth for the settings page
+  // and the composer control; both bind it through the slots hooks seat).
   // The reserved `hooks` compartment must hold HostObservable sources — the
   // slot system binds them into `use<Name>` selector hooks and REMOVES them
   // from the component props (the dsh-at-file `hooks: { scope }` pattern).
@@ -116,9 +103,33 @@ export function apply(ctx: ClientContext): void {
     getSnapshot: () => settings,
     subscribe: subscribeSettings,
   }
+
+  // The composer control: an icon in the input box's right tool row. Clicking
+  // it opens a searchable popup of the workspace repo's issues and PRs; the
+  // pick text follows the configured insert format and goes through the
+  // framework input machine (inputActions.setDraft), so the Host's mention
+  // scanner always marks the pick.
+  ctx.effect(() => {
+    const dispose = ctx.slots.inject('conversation.input.right', () => ctx.slots.register({
+      name: 'conversation.input.right',
+      id: 'gh-issue-picker',
+      order: 100,
+      label: () => t('nav'),
+      locale: NS,
+      inject: (): PickerInjected => ({
+        hooks: { settings: settingsSnapshot },
+        search: (query, sessionId, signal) => cache.resolve(query, sessionId, signal),
+      }),
+    }, GhIssuePickerButton))
+    return dispose
+  }, 'dsh-github-picker: composer input slot')
+
+  // The settings section: insert format and the gh account-connection status
+  // card. The repository is always resolved from the workspace git remote —
+  // no override field, no enable switch.
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section',
-    id: 'at-github',
+    id: 'github-settings',
     order: 55,
     label: () => t('nav'),
     locale: NS,

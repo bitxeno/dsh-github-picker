@@ -2,8 +2,9 @@
  * The dsh-github-picker wire contract, shared verbatim by the host manifest
  * (`ctx.typert.register` in typert.ts) and the client contribution
  * (`ctx.remote.$mount` in client/remote.ts). The service exposes GitHub
- * issue/PR search for the browser's `@` picker (through the gh CLI only,
- * no device flow), plugin-owned settings, and the gh account-connection
+ * issue/PR search for the browser's composer picker (through the gh CLI
+ * only, no device flow), the plugin-owned settings (insert format — there is
+ * no enable switch, the picker is always on), and the gh account-connection
  * status. Issue bodies and tokens never cross this boundary: the Host only
  * marks validated `#number` references at `agent/pre-step`.
  */
@@ -15,7 +16,7 @@ export interface GitHubEntry {
     readonly title: string;
     readonly kind: 'issue' | 'pr';
     readonly state: 'open' | 'closed';
-    /** The issue's html_url (opened in the browser by the dock). */
+    /** The issue's html_url (opened in the browser by the picker). */
     readonly url: string;
     /** True for pull requests still in draft state. */
     readonly draft?: boolean;
@@ -38,16 +39,11 @@ export interface GitHubSearchResult {
 }
 /** The `gh-issue` settings namespace's durable shape (host and client share it). */
 export interface GhIssueSettings {
-    /** Whether the @ surface is enabled; false hides the picker and reference injection. */
-    readonly enabled: boolean;
     /** Inserted reference format: the @owner/repo#number form (default) or the plain GitHub URL. */
     readonly insertFormat: 'url' | 'ref';
 }
 /** One field update sent through the plugin-owned settings Remote. */
 export type GhIssueSettingsUpdate = {
-    readonly field: 'enabled';
-    readonly value: boolean;
-} | {
     readonly field: 'insertFormat';
     readonly value: 'url' | 'ref';
 };
@@ -116,7 +112,6 @@ export declare const gitHubSearchResultSchema: z.ZodReadonly<z.ZodObject<{
 }, z.core.$strip>>;
 /** Wire codec: the resolved gh-issue settings section. */
 export declare const ghIssueSettingsSchema: z.ZodReadonly<z.ZodObject<{
-    enabled: z.ZodBoolean;
     insertFormat: z.ZodEnum<{
         url: "url";
         ref: "ref";
@@ -124,9 +119,6 @@ export declare const ghIssueSettingsSchema: z.ZodReadonly<z.ZodObject<{
 }, z.core.$strip>>;
 /** Wire codec: one field update. */
 export declare const ghIssueSettingsUpdateSchema: z.ZodDiscriminatedUnion<[z.ZodReadonly<z.ZodObject<{
-    field: z.ZodLiteral<"enabled">;
-    value: z.ZodBoolean;
-}, z.core.$strip>>, z.ZodReadonly<z.ZodObject<{
     field: z.ZodLiteral<"insertFormat">;
     value: z.ZodEnum<{
         url: "url";

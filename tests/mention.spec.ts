@@ -66,7 +66,7 @@ describe('scanMentions', () => {
 
 describe('expandMentions', () => {
   it('injects reference markers for every unique mention', () => {
-    const injections = expandMentions([userMessage('fix #123 and #456 and #123')], repo, true)
+    const injections = expandMentions([userMessage('fix #123 and #456 and #123')], repo)
     expect(injections).toHaveLength(2)
     expect(injections[0]?.content[0]?.type).toBe('text')
     expect(injections[0]?.source).toMatchObject({ kind: 'gh-issue-mention', number: 123 })
@@ -74,9 +74,8 @@ describe('expandMentions', () => {
     expect(text).toBe('<github-reference repo="owner/name" number="123" />')
   })
 
-  it('returns nothing when disabled or without a repo', () => {
-    expect(expandMentions([userMessage('#123')], repo, false)).toEqual([])
-    expect(expandMentions([userMessage('#123')], undefined, true)).toEqual([])
+  it('returns nothing without a repo', () => {
+    expect(expandMentions([userMessage('#123')], undefined)).toEqual([])
   })
 
   it('only scans user-authored text', () => {
@@ -84,7 +83,7 @@ describe('expandMentions', () => {
       content: [{ type: 'text', text: '#999' }],
       source: { kind: 'assistant' as never },
     })
-    expect(expandMentions([assistant], repo, true)).toEqual([])
+    expect(expandMentions([assistant], repo)).toEqual([])
   })
 
   it('skips non-text content blocks', () => {
@@ -95,14 +94,14 @@ describe('expandMentions', () => {
       ],
       source: { kind: 'user' },
     }) as UserMessage
-    const injections = expandMentions([withImage], repo, true)
+    const injections = expandMentions([withImage], repo)
     expect(injections).toHaveLength(1)
     expect(injections[0]?.source).toMatchObject({ number: 55 })
   })
 
   it('escapes the repository attribute', () => {
     const weird: GitHubRepoRef = { owner: 'a&b', name: 'c"d' }
-    const injections = expandMentions([userMessage('#1')], weird, true)
+    const injections = expandMentions([userMessage('#1')], weird)
     const text = (injections[0]?.content[0] as { type: 'text'; text: string }).text
     expect(text).toBe('<github-reference repo="a&amp;b/c&quot;d" number="1" />')
   })
@@ -116,8 +115,6 @@ describe('mentionPreStep', () => {
     }
     const decision = await mentionPreStep(
       { session: { header: { cwd: '/work' } } },
-      () => true,
-      () => '',
       resolver,
       [userMessage('fix #123')],
       new AbortController().signal,
@@ -134,8 +131,6 @@ describe('mentionPreStep', () => {
     const resolver = { resolve: vi.fn(async () => repo) }
     const decision = await mentionPreStep(
       { session: { header: { cwd: '/work' } } },
-      () => true,
-      () => '',
       resolver,
       [userMessage('#1')],
       new AbortController().signal,
@@ -145,26 +140,11 @@ describe('mentionPreStep', () => {
     expect(resolver.resolve).not.toHaveBeenCalled()
   })
 
-  it('skips when disabled or without a cwd', async () => {
+  it('skips without a cwd', async () => {
     const next = vi.fn(async () => ({ kind: 'enter', messages: [userMessage('x')] }))
     const resolver = { resolve: vi.fn(async () => repo) }
-    const disabled = await mentionPreStep(
-      { session: { header: { cwd: '/work' } } },
-      () => false,
-      () => '',
-      resolver,
-      [userMessage('#1')],
-      new AbortController().signal,
-      next,
-    )
-    expect(disabled.kind).toBe('enter')
-    if (disabled.kind === 'enter') expect(disabled.messages).toHaveLength(1)
-    expect(resolver.resolve).not.toHaveBeenCalled()
-
     const noCwd = await mentionPreStep(
       { session: { header: {} } },
-      () => true,
-      () => '',
       resolver,
       [userMessage('#1')],
       new AbortController().signal,
@@ -179,8 +159,6 @@ describe('mentionPreStep', () => {
     const next = vi.fn(async () => ({ kind: 'enter', messages: [userMessage('x')] }))
     const none = await mentionPreStep(
       { session: { header: { cwd: '/work' } } },
-      () => true,
-      () => '',
       { resolve: vi.fn(async () => repo) },
       [userMessage('no mentions')],
       new AbortController().signal,
@@ -191,8 +169,6 @@ describe('mentionPreStep', () => {
 
     const noRepo = await mentionPreStep(
       { session: { header: { cwd: '/work' } } },
-      () => true,
-      () => '',
       { resolve: vi.fn(async () => undefined) },
       [userMessage('#1')],
       new AbortController().signal,

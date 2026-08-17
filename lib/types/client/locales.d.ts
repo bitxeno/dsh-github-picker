@@ -1,27 +1,26 @@
 /**
- * `gh-issue` locale namespace: the # picker menu, the referenced-issue dock,
- * and the settings section copy. Chinese is the product copy; English
- * mirrors it.
+ * `gh-issue` locale namespace: the composer picker button and popup copy
+ * (search, loading, empty, the localized failure hint rows) plus the
+ * settings section copy (title, insert format, the gh account-connection
+ * card). Chinese is the product copy; English mirrors it. There is no enable
+ * switch — the picker is always on.
  */
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export declare const zh: {
     nav: string;
-    'menu.aria': string;
-    'menu.repo': string;
-    'menu.loading': string;
-    'menu.empty': string;
-    'menu.error': string;
-    'menu.error.gh-missing': string;
-    'menu.error.not-authenticated': string;
-    'menu.error.rate-limited': string;
-    'menu.error.network': string;
-    'menu.error.repo-not-found': string;
-    'menu.error.unknown': string;
-    'menu.no-repo': string;
+    'picker.open': string;
+    'picker.search': string;
+    'picker.loading': string;
+    'picker.empty': string;
+    'picker.no-repo': string;
+    'picker.error.gh-missing': string;
+    'picker.error.not-authenticated': string;
+    'picker.error.rate-limited': string;
+    'picker.error.network': string;
+    'picker.error.repo-not-found': string;
+    'picker.error.unknown': string;
     'settings.title': string;
     'settings.subtitle': string;
-    'settings.enabled': string;
-    'settings.enabledDesc': string;
     'settings.insertFormat': string;
     'settings.insertFormat.url': string;
     'settings.insertFormat.ref': string;
@@ -42,22 +41,19 @@ export type GhIssueKey = keyof typeof zh;
 /** English dictionary, checked complete against the zh key set. */
 export declare const en: {
     nav: string;
-    'menu.aria': string;
-    'menu.repo': string;
-    'menu.loading': string;
-    'menu.empty': string;
-    'menu.error': string;
-    'menu.error.gh-missing': string;
-    'menu.error.not-authenticated': string;
-    'menu.error.rate-limited': string;
-    'menu.error.network': string;
-    'menu.error.repo-not-found': string;
-    'menu.error.unknown': string;
-    'menu.no-repo': string;
+    'picker.open': string;
+    'picker.search': string;
+    'picker.loading': string;
+    'picker.empty': string;
+    'picker.no-repo': string;
+    'picker.error.gh-missing': string;
+    'picker.error.not-authenticated': string;
+    'picker.error.rate-limited': string;
+    'picker.error.network': string;
+    'picker.error.repo-not-found': string;
+    'picker.error.unknown': string;
     'settings.title': string;
     'settings.subtitle': string;
-    'settings.enabled': string;
-    'settings.enabledDesc': string;
     'settings.insertFormat': string;
     'settings.insertFormat.url': string;
     'settings.insertFormat.ref': string;
@@ -84,7 +80,7 @@ export declare const NS = "gh-issue";
 export declare function fmt(template: string, params?: Record<string, string>): string;
 declare module '@deepseek-ai/dsh-client-ui-slots' {
     interface LocaleNamespaceMap {
-        /** The # reference, dock, and settings copy. */
+        /** The composer picker and settings copy. */
         [NS]: GhIssueKey;
     }
 }

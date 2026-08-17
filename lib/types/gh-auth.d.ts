@@ -2,7 +2,7 @@
  * gh CLI account-connection status for the Web settings page. The plugin only
  * ever uses gh (no device flow, no stored tokens): `gh auth status --json
  * hosts` reports every logged-in account with its host, login, active flag,
- * and scopes — the picker-facing snapshot the settings card renders. No token
+ * and scopes — the connection snapshot the settings card renders. No token
  * material is read or kept; the same subprocess seam the search provider
  * uses keeps this unit-testable.
  */

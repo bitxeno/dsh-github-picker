@@ -5,9 +5,10 @@
  * `/api/ghIssue/<method>` with zero generated artifacts: `search` takes the
  * resolved live Agent (the `agent` Typert lookup) and searches its workspace
  * repository through the gh CLI only (no device flow, no stored tokens);
- * `getGhAuthStatus` reports the gh account-connection status for the
- * settings page. The Host only marks validated `#number` references at
- * `agent/pre-step`.
+ * `getSettings`/`updateSettings` serve the durable settings (insert format)
+ * over the plugin-owned scope; `getGhAuthStatus` reports the gh
+ * account-connection status for the settings page. The Host only marks
+ * validated `#number` references at `agent/pre-step`.
  */
 import type { Context } from '@deepseek-ai/cordis'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
@@ -33,7 +34,7 @@ export interface GhDeps {
   readonly ghCommand: GhCommand
 }
 
-/** Gh-issue workspace service: search the agent's repository for the @ picker. */
+/** Gh-issue workspace service: search the agent's repository for the composer picker. */
 export class GhIssueRuntime extends TypertRemoteService {
   private readonly resolver: RepoResolver
 
@@ -41,11 +42,11 @@ export class GhIssueRuntime extends TypertRemoteService {
    * Register the service under the `ghIssue` key (the wire namespace).
    * @param ctx - owning cordis context.
    * @param config - resolved plugin configuration.
-   * @param readSettings - live settings read; false refuses the endpoint.
+   * @param readSettings - live settings read for the insert format.
    * @param writeSettings - durable settings write returning the resolved section.
-   * @param gh - the gh CLI search provider and subprocess seam.
+   * @param gh - the gh CLI search provider.
    * @param ghCommand - the gh subprocess runner (auth status + search share the seam).
-   * @param timeoutMs - subprocess timeout for the auth-status probe.
+   * @param authTimeoutMs - subprocess timeout for the auth-status probe.
    */
   constructor(
     ctx: Context,
@@ -75,7 +76,7 @@ export class GhIssueRuntime extends TypertRemoteService {
   /**
    * Search the addressed agent's repository for issues and pull requests
    * through the gh CLI.
-   * @param query - the text typed after `@` ('' lists recent items).
+   * @param query - the typed query ('' lists recent items).
    * @param agent - the live agent resolved from the `agentId` wire field; its
    *   session header owns the workspace cwd.
    * @param signal - caller lifetime; the provider races it.
@@ -83,17 +84,13 @@ export class GhIssueRuntime extends TypertRemoteService {
    */
   @Remote
   async search(query: string, agent: Agent, signal: AbortSignal): Promise<GitHubSearchResult> {
-    const settings = this.readSettings()
-    if (!settings.enabled) {
-      throw new Error('dsh-github-picker: # references are disabled in Settings')
-    }
     const cwd = agent.session.header.cwd
     if (cwd === undefined) {
       throw new Error('dsh-github-picker: the session has no workspace directory')
     }
     const repo = await this.resolveRepo(cwd, '', signal)
     if (repo === undefined) {
-      throw new Error('dsh-github-picker: no GitHub repository detected (set one in Settings or add a git remote)')
+      throw new Error('dsh-github-picker: no GitHub repository detected (add a git remote)')
     }
     const entries = await this.gh.search(repo, query, signal)
     return {
@@ -104,7 +101,7 @@ export class GhIssueRuntime extends TypertRemoteService {
     }
   }
 
-  /** Resolve the repository identity through the settings override or git remote. */
+  /** Resolve the repository identity through the workspace git remote. */
   resolveRepo(
     cwd: string,
     override: string,

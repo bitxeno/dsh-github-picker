@@ -40,13 +40,13 @@ export declare function scanMentions(text: string, repo: GitHubRepoRef): readonl
 /**
  * Expand every GitHub reference into a marker, in first-seen order. A bare
  * `#number` token resolves against the workspace repo; URL and
- * `@owner/repo#number` forms carry their own repository.
+ * `@owner/repo#number` forms carry their own repository. The plugin has no
+ * enable switch — references are always marked.
  * @param messages - the assembled step messages.
  * @param repo - the workspace repository identity (undefined = no bare-# resolution).
- * @param isEnabled - live settings read.
- * @returns the injected user messages (empty when nothing matched or disabled).
+ * @returns the injected user messages (empty when nothing matched).
  */
-export declare function expandMentions(messages: readonly UserMessage[], repo: GitHubRepoRef | undefined, isEnabled: boolean): UserMessage[];
+export declare function expandMentions(messages: readonly UserMessage[], repo: GitHubRepoRef | undefined): UserMessage[];
 /** The minimal agent face the pre-step handler reads. */
 export interface MentionAgent {
     session: {
@@ -64,12 +64,10 @@ export interface MentionRepoResolver {
  * messages and append the injections to the downstream decision. The repo is
  * resolved once per step (cached host-side by the resolver).
  * @param agent - the addressed agent (its session header owns the cwd).
- * @param isEnabled - live settings read.
- * @param repoOverride - the settings repository override.
  * @param resolver - the repository resolver seam.
  * @param messages - the claimed messages (the user's own words).
  * @param signal - caller lifetime.
  * @param next - the downstream waterfall.
  * @returns the decision with injections appended, or the downstream decision.
  */
-export declare function mentionPreStep(agent: MentionAgent, isEnabled: () => boolean, repoOverride: () => string, resolver: MentionRepoResolver, messages: readonly UserMessage[], signal: AbortSignal, next: () => Promise<PreStepDecision>): Promise<PreStepDecision>;
+export declare function mentionPreStep(agent: MentionAgent, resolver: MentionRepoResolver, messages: readonly UserMessage[], signal: AbortSignal, next: () => Promise<PreStepDecision>): Promise<PreStepDecision>;

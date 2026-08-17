@@ -1,5 +1,5 @@
 /**
- * The data-source seam behind the @ picker. Only the gh CLI provider exists
+ * The data-source seam behind the composer picker. Only the gh CLI provider exists
  * (no device flow, no REST-API mode), so the runtime calls one provider
  * directly; the seam keeps the provider testable with a stubbed command.
  */

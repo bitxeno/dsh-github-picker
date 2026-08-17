@@ -1,6 +1,6 @@
 # dsh-github-picker 开发方案 —— `#` 前缀 GitHub Issue/PR 搜索插件
 
-> 状态：**已实现并转向标准 `@` 触发（v2）** · 产品名：`dsh-github-picker` · 参考插件：`dsh-at-file`（v0.6.0）
+> 状态：**已实现（v5.1：设置区段保留，标题改为「GitHub 引用」，无启用开关）** · 产品名：`dsh-github-picker` · 参考插件：`dsh-at-file`（v0.6.0）
 > 文档保存于 `docs/plan/`。
 
 > ## ⚠️ 实现修订（v2，2026-08）：架构从自研 `#` 菜单转为标准 `@` 触发源
@@ -27,6 +27,26 @@
 > - 新增：`src/gh-auth.ts`（`gh auth status --json hosts` → 帐号连接状态）与端点 `ghIssue/getGhAuthStatus`。
 > - 设置页改为 GitHub 品牌连接卡片（图标 + 「通过 gh CLI」+ Connected/未连接徽章，即时展示已登录帐号）；插入格式下拉 `ref` 置首。
 > - 仓库一律由工作区 git remote 自动解析。
+
+> ## ⚠️ v4（2026-08）：去掉 `@` 触发源，改为输入框右下角图标 + 弹窗（参考 dsh-skill-picker）
+>
+> 按用户确认：**删除标准 `@` 输入触发源（`src/client/source.ts` 及其测试），改为 composer 工具行图标按钮**（`conversation.input.right` 列表槽，id `gh-issue-picker`，order 100）。
+> - 交互：点击 GitHub 图标 → 弹出搜索框 + 结果列表（按钮旁兄弟节点，`absolute; bottom: calc(100% + 8px); right: 0`，无 portal）；每次打开加载一次最近列表（query `''`，按会话缓存 30s），本地 `rankEntries` 过滤；点击行 → `inputActions.setDraft` 落稿完整新草稿（`@owner/repo#N` 或 URL），关闭弹窗；Esc / 弹窗外点击关闭；加载中、失败提示（`picker.error.*` 本地化，不可选中）、空列表均有本地化文案。
+> - 新增：`src/client/picker.tsx` + `tests/picker.spec.tsx`（jsdom）；`styles.ts` 删除 MenuView 行布局覆盖（`dsh-slash-option-github-` 前缀），弹窗样式内联。
+> - settings 命名空间保持不变（`enabled` 关闭时隐藏按钮）；host 侧 `scanMentions`/`ghIssue/*` 端点均不变；已删除 `dsh-client-ui-input-trigger` 的 inject/peer 依赖。
+> - 已删除文件：`src/client/source.ts`、`tests/source.spec.ts`。当前客户端文件清单见 `AGENTS.md`。
+
+> ## ⚠️ v5（2026-08）：去掉浏览器设置页，配置收进官方插件 Config —— 后经 v5.1 撤销
+>
+> 初案（按用户初步确认）：**插件配置不再在侧边栏设置页里显示，改由官方插件配置管理（profile 的 `cordis.patch.yml`）；删除「GitHub 提及」启用开关（选择器始终可用）**。为此删除了 `src/settings.ts`、`src/gh-auth.ts`、`src/client/SettingsSection.tsx`、`src/client/styles.ts`，契约收敛为 `ghIssue/search` + `ghIssue/getConfig`。
+>
+> ### v5.1（2026-08）：撤销设置页移除，仅保留「无启用开关」+ 改标题
+>
+> 用户撤销了设置页移除：**插件配置（设置区段）恢复显示在侧边栏；但删除「启用 GitHub 提及」开关；侧边栏标题从「GitHub 提及」改为「GitHub 引用」**。
+> - 恢复：`src/settings.ts`（`gh-issue` 命名空间只剩 `insertFormat`，schema 无 `enabled`）、`src/gh-auth.ts`、`src/client/SettingsSection.tsx`（连接卡片 + 插入格式下拉，无 enable 卡片）、`src/client/styles.ts`（去掉已失效的 `dsh-slash-option-github-` MenuView 尾部覆盖）；host `inject` 恢复 `settings`，包依赖恢复 `@deepseek-ai/dsh-settings` / `@deepseek-ai/dsh-client-ui-settings`。
+> - 契约恢复为四个端点：`ghIssue/search` + `ghIssue/getSettings` + `ghIssue/updateSettings` + `ghIssue/getGhAuthStatus`；`GhIssueConfig` → `GhIssueSettings { insertFormat }`（无 `enabled`），Config schema 不再含 `insertFormat`（回到设置页管理）。
+> - 标题：`settings.title` / 侧边栏 `label` 从「GitHub 提及」改为「GitHub 引用」（en 对应 `GitHub references`）。
+> - `enabled` 彻底删除：`expandMentions`/`mentionPreStep`/picker/搜索门禁均无开关判断，mention 预步骤始终标记。
 
 ## 一、现状分析（已完成调研）
 

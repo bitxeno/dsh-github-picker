@@ -44,12 +44,13 @@ describe('ghIssue wire codecs', () => {
     expect(() => gitHubSearchResultSchema.parse({ ...value, source: 'api' })).toThrow()
   })
 
-  it('round-trips settings and every update field', () => {
-    const settings = { enabled: false, insertFormat: 'ref' }
+  it('round-trips settings and the insert-format update', () => {
+    const settings = { insertFormat: 'ref' }
     expect(ghIssueSettingsSchema.parse(settings)).toEqual(settings)
-    expect(ghIssueSettingsUpdateSchema.parse({ field: 'enabled', value: true })).toEqual({ field: 'enabled', value: true })
     expect(ghIssueSettingsUpdateSchema.parse({ field: 'insertFormat', value: 'url' })).toEqual({ field: 'insertFormat', value: 'url' })
-    expect(() => ghIssueSettingsUpdateSchema.parse({ field: 'enabled', value: 'yes' })).toThrow()
+    expect(() => ghIssueSettingsUpdateSchema.parse({ field: 'insertFormat', value: 'html' })).toThrow()
+    // The enable switch is gone with the update surface.
+    expect(() => ghIssueSettingsUpdateSchema.parse({ field: 'enabled', value: true })).toThrow()
     expect(() => ghIssueSettingsUpdateSchema.parse({ field: 'nope', value: 1 })).toThrow()
     // The mode/clientId/scope/repo fields are gone with the device flow and
     // the repository override.
