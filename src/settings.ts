@@ -1,0 +1,30 @@
+/**
+ * The `gh-issue` settings namespace: the durable enable switch and insert
+ * format managed from the Web settings page. Registered with the settings
+ * provider at plugin load; the runtime reads the owner scope's live value on
+ * every call, so changes take effect without a restart. The data source is
+ * always the gh CLI and the repository always resolves from the workspace
+ * git remote — there is no device flow, no stored token, no override field.
+ */
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
+import { settingsNamespace, type SettingsScope } from '@deepseek-ai/dsh-settings'
+import type { GhIssueSettings } from './contract.ts'
+
+/** The branded namespace name (the Web allowlist must list the same string). */
+export const GH_ISSUE_NAMESPACE = settingsNamespace('gh-issue')
+
+/** Schemastery schema of the `gh-issue` namespace section. */
+export const GhIssueSettingsSchema: z<GhIssueSettings> = z.object({
+  enabled: z.boolean().default(true),
+  insertFormat: z.union(['url', 'ref'] as const).default('ref'),
+})
+
+/**
+ * Register the namespace with the settings provider and return its owner scope.
+ * @param ctx - the plugin context carrying the settings provider.
+ * @returns the owner scope backing the runtime's live reads.
+ */
+export function registerGhIssueSettings(ctx: Context): SettingsScope<GhIssueSettings> {
+  return ctx.settings.register(GH_ISSUE_NAMESPACE, GhIssueSettingsSchema, { applies: 'live' })
+}

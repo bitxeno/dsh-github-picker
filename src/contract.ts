@@ -1,0 +1,209 @@
+/**
+ * The dsh-github-picker wire contract, shared verbatim by the host manifest
+ * (`ctx.typert.register` in typert.ts) and the client contribution
+ * (`ctx.remote.$mount` in client/remote.ts). The service exposes GitHub
+ * issue/PR search for the browser's `@` picker (through the gh CLI only,
+ * no device flow), plugin-owned settings, and the gh account-connection
+ * status. Issue bodies and tokens never cross this boundary: the Host only
+ * marks validated `#number` references at `agent/pre-step`.
+ */
+import { z } from 'zod'
+import type { InvocationDescriptor } from '@deepseek-ai/dsh-typert-protocol'
+
+/** One searchable GitHub issue or pull request entry. */
+export interface GitHubEntry {
+  readonly number: number
+  readonly title: string
+  readonly kind: 'issue' | 'pr'
+  readonly state: 'open' | 'closed'
+  /** The issue's html_url (opened in the browser by the dock). */
+  readonly url: string
+  /** True for pull requests still in draft state. */
+  readonly draft?: boolean
+  /** True for pull requests merged into their base branch. */
+  readonly merged?: boolean
+}
+
+/** The repository identity a search resolved against. */
+export interface GitHubRepoRef {
+  readonly owner: string
+  readonly name: string
+}
+
+/** One search round-trip: the bounded entry list plus the resolved repo. */
+export interface GitHubSearchResult {
+  readonly entries: readonly GitHubEntry[]
+  readonly repo: GitHubRepoRef
+  /** The data source that produced the entries (always the gh CLI). */
+  readonly source: 'gh'
+  /** True when the provider capped the result list. */
+  readonly truncated: boolean
+}
+
+/** The `gh-issue` settings namespace's durable shape (host and client share it). */
+export interface GhIssueSettings {
+  /** Whether the @ surface is enabled; false hides the picker and reference injection. */
+  readonly enabled: boolean
+  /** Inserted reference format: the @owner/repo#number form (default) or the plain GitHub URL. */
+  readonly insertFormat: 'url' | 'ref'
+}
+
+/** One field update sent through the plugin-owned settings Remote. */
+export type GhIssueSettingsUpdate =
+  | { readonly field: 'enabled'; readonly value: boolean }
+  | { readonly field: 'insertFormat'; readonly value: 'url' | 'ref' }
+
+/** One logged-in gh account (connection facts only; tokens never cross the wire). */
+export interface GhAuthAccount {
+  /** The host the account is logged into (e.g. github.com). */
+  readonly host: string
+  /** The gh/account login name. */
+  readonly login: string
+  /** Whether this is the active account for git operations. */
+  readonly active: boolean
+  /** The comma-separated token scopes the account holds ('' when unknown). */
+  readonly scopes: string
+}
+
+/** The gh account-connection status surfaced to the settings page. */
+export interface GhAuthStatus {
+  /** Every logged-in account, in gh's reported order; empty when none. */
+  readonly accounts: readonly GhAuthAccount[]
+  /** Stable failure kind when the status could not be read. */
+  readonly error?: 'gh-missing' | 'not-authenticated' | 'unknown'
+}
+
+/** Wire codec: one GitHub issue/PR entry. */
+export const gitHubEntrySchema = z.object({
+  number: z.number().int().positive(),
+  title: z.string().min(1),
+  kind: z.enum(['issue', 'pr']),
+  state: z.enum(['open', 'closed']),
+  url: z.string().min(1),
+  draft: z.boolean().optional(),
+  merged: z.boolean().optional(),
+}).readonly()
+
+/** Wire codec: the resolved repository identity. */
+export const gitHubRepoRefSchema = z.object({
+  owner: z.string().min(1),
+  name: z.string().min(1),
+}).readonly()
+
+/** Wire codec: one search round-trip result. */
+export const gitHubSearchResultSchema = z.object({
+  entries: z.array(gitHubEntrySchema),
+  repo: gitHubRepoRefSchema,
+  source: z.literal('gh'),
+  truncated: z.boolean(),
+}).readonly()
+
+/** Wire codec: the resolved gh-issue settings section. */
+export const ghIssueSettingsSchema = z.object({
+  enabled: z.boolean(),
+  insertFormat: z.enum(['url', 'ref']),
+}).readonly()
+
+/** Wire codec: one field update. */
+export const ghIssueSettingsUpdateSchema = z.discriminatedUnion('field', [
+  z.object({ field: z.literal('enabled'), value: z.boolean() }).readonly(),
+  z.object({ field: z.literal('insertFormat'), value: z.enum(['url', 'ref']) }).readonly(),
+])
+
+/** Wire codec: one logged-in gh account. */
+export const ghAuthAccountSchema = z.object({
+  host: z.string().min(1),
+  login: z.string().min(1),
+  active: z.boolean(),
+  scopes: z.string(),
+}).readonly()
+
+/** Wire codec: the gh account-connection status. */
+export const ghAuthStatusSchema = z.object({
+  accounts: z.array(ghAuthAccountSchema),
+  error: z.enum(['gh-missing', 'not-authenticated', 'unknown']).optional(),
+}).readonly()
+
+/** The ghIssue Remote namespace's strict invocation descriptors. */
+export const GH_ISSUE_INVOCATIONS: readonly InvocationDescriptor[] = [
+  {
+    id: 'dsh-github-picker#ghIssue/search',
+    service: 'ghIssue',
+    namespace: 'ghIssue',
+    method: 'search',
+    invocation: { kind: 'direct' },
+    parameters: [
+      {
+        name: 'query',
+        wire: 'query',
+        source: 'json',
+        codec: { mode: 'strict', typeSymbol: 'string', schema: z.string() },
+      },
+      {
+        name: 'agent',
+        wire: 'agentId',
+        source: 'lookup',
+        lookup: 'agent',
+        // The type symbol must equal the agent lookup provider's wire identity
+        // exactly — the gateway's strict path rejects a mismatched symbol.
+        codec: { mode: 'strict', typeSymbol: '@deepseek-ai/dsh-session/types#SessionId', schema: z.string().min(1) },
+      },
+    ],
+    cancellation: { parameter: 'signal' },
+    result: {
+      mode: 'strict',
+      typeSymbol: 'dsh-github-picker#GitHubSearchResult',
+      schema: gitHubSearchResultSchema,
+    },
+  },
+  {
+    id: 'dsh-github-picker#ghIssue/getSettings',
+    service: 'ghIssue',
+    namespace: 'ghIssue',
+    method: 'getSettings',
+    invocation: { kind: 'direct' },
+    parameters: [],
+    result: {
+      mode: 'strict',
+      typeSymbol: 'dsh-github-picker#GhIssueSettings',
+      schema: ghIssueSettingsSchema,
+    },
+  },
+  {
+    id: 'dsh-github-picker#ghIssue/updateSettings',
+    service: 'ghIssue',
+    namespace: 'ghIssue',
+    method: 'updateSettings',
+    invocation: { kind: 'direct' },
+    parameters: [
+      {
+        name: 'update',
+        wire: 'update',
+        source: 'json',
+        codec: {
+          mode: 'strict',
+          typeSymbol: 'dsh-github-picker#GhIssueSettingsUpdate',
+          schema: ghIssueSettingsUpdateSchema,
+        },
+      },
+    ],
+    result: {
+      mode: 'strict',
+      typeSymbol: 'dsh-github-picker#GhIssueSettings',
+      schema: ghIssueSettingsSchema,
+    },
+  },
+  {
+    id: 'dsh-github-picker#ghIssue/getGhAuthStatus',
+    service: 'ghIssue',
+    namespace: 'ghIssue',
+    method: 'getGhAuthStatus',
+    invocation: { kind: 'direct' },
+    parameters: [],
+    result: {
+      mode: 'strict',
+      typeSymbol: 'dsh-github-picker#GhAuthStatus',
+      schema: ghAuthStatusSchema,
+    },
+  },
+]

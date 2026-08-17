@@ -1,0 +1,12 @@
+{
+  "name": "dsh-github-picker",
+  "description": "GitHub issue and PR references for the DeepSeek Harness web GUI",
+  "version": "0.1.0",
+  "entry": {
+    "name": "dsh-github-picker",
+    "inject": []
+  },
+  "client": {
+    "platform": "web"
+  }
+}
