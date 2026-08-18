@@ -1,7 +1,9 @@
 # dsh-github-picker
 
 <div align="center">
+  
 English | [简体中文](README.zh.md)
+
 </div>
 
 GitHub issue and pull request references for the DeepSeek Harness web GUI. Click the GitHub icon at the bottom-right of the input box (the composer's tool row, next to the send button) to open a searchable list of the current workspace repository's issues and pull requests, and insert a reference — a GitHub URL, or an `@owner/repo#number` mention.
