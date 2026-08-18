@@ -1,13 +1,16 @@
 /**
  * dsh-github-picker client plugin: the browser half of the GitHub picker.
- * Mounts the githubPicker Remote namespace, the settings section, and the composer
- * control — a GitHub-mark button in the input box's right tool row
+ * Mounts the githubPicker Remote namespace (search + gh auth status), the
+ * official plugin-configuration card (`settings.plugin.item`, keyed on the
+ * `github-picker` settings namespace), and the composer control — a
+ * GitHub-mark button in the input box's right tool row
  * (`conversation.input.right` list slot, the seat next to the send button).
  * Clicking it opens a searchable popup of the workspace repository's issues
  * and pull requests; picking inserts the configured reference text through
- * the framework input machine. The settings page manages the insert format
- * (there is no enable switch — the picker is always on); the Host owns all
- * data access.
+ * the framework input machine. The insert format lives in the plugin-owned
+ * settings namespace and is read and written through the official settings
+ * scope (there is no enable switch — the picker is always on); the Host
+ * owns all data access.
  */
 // Type-only: the ctx.remote merge and the forwarded Host-event face.
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
@@ -15,8 +18,11 @@ import type {} from '@deepseek-ai/dsh-client-connection/client'
 import type { ClientContext, SessionId } from '@deepseek-ai/dsh-client-runtime/client'
 // Type-only: the ctx.locale Context merge.
 import type {} from '@deepseek-ai/dsh-client-locale/client'
-// Type-only: brings the settings.section SlotMap declaration into this program.
+// Type-only: the ctx.settingsScope service (official settings transport).
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
+// Type-only: brings the keyed settings.plugin.item SlotMap declaration (the
+// plugin-configuration tab dispatches one card per served namespace).
+import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import { GH_ISSUE_REMOTE } from './remote.ts'
 import { HashCache } from './cache.ts'
 import { classifySearchError, type SearchErrorKind } from './search.ts'
@@ -26,14 +32,12 @@ import { NS, zh, en } from './locales.ts'
 import { adoptStyles } from './styles.ts'
 import type { GhAuthStatus, GhIssueSettings, GhIssueSettingsUpdate, GitHubSearchResult } from '../contract.ts'
 
-/** Required services: the Remote face, the slot registry, and locale. */
-export const inject = ['remote', 'slots', 'locale']
+/** Required services: the Remote face, the slot registry, locale, and the settings scope. */
+export const inject = ['remote', 'slots', 'locale', 'settingsScope']
 
 /** The mounted githubPicker namespace service's callable face. */
 interface GhIssueFace {
   search(query: string, page: number, sessionId: SessionId, signal?: AbortSignal): Promise<{ ok: true; value: GitHubSearchResult } | { ok: false; error: { code: string; message: string; details: object } }>
-  getSettings(): Promise<{ ok: true; value: GhIssueSettings } | { ok: false; error: { code: string; message: string; details: object } }>
-  updateSettings(update: GhIssueSettingsUpdate): Promise<{ ok: true; value: GhIssueSettings } | { ok: false; error: { code: string; message: string; details: object } }>
   getGhAuthStatus(): Promise<{ ok: true; value: GhAuthStatus } | { ok: false; error: { code: string; message: string; details: object } }>
 }
 
@@ -51,16 +55,11 @@ export function apply(ctx: ClientContext): void {
   const t = ctx.locale.bind(NS)
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-github-picker: dictionaries')
 
-  // The plugin's own settings snapshot (loaded from the Host on mount).
-  let settings: GhIssueSettings = { insertFormat: 'ref' }
-  const settingsListeners = new Set<() => void>()
-  const notifySettings = (): void => {
-    for (const listener of [...settingsListeners]) listener()
-  }
-  const subscribeSettings = (listener: () => void): (() => void) => {
-    settingsListeners.add(listener)
-    return () => { settingsListeners.delete(listener) }
-  }
+  // The official settings transport: the bound scope directly mirrors the
+  // Host's `github-picker` namespace (registered in settings.ts). The card
+  // writes through scope.set (revision-fenced); the composer picker reads
+  // the same section for its insert format.
+  const ghScope = ctx.settingsScope.bind<GhIssueSettings>({ namespace: 'github-picker' })
 
   let remote: GhIssueFace | undefined
 
@@ -69,12 +68,6 @@ export function apply(ctx: ClientContext): void {
     remote = (ctx.reflect as unknown as { get(name: string): unknown }).get('remote.githubPicker') as GhIssueFace | undefined
     if (remote === undefined) {
       throw new Error('dsh-github-picker: the githubPicker Remote namespace did not mount')
-    }
-    // Load the durable settings snapshot once the wire is live.
-    const settingsResult = await remote.getSettings()
-    if (settingsResult.ok) {
-      settings = settingsResult.value
-      notifySettings()
     }
     return () => {
       remote = undefined
@@ -94,14 +87,16 @@ export function apply(ctx: ClientContext): void {
     return result.value
   })
 
-  // The shared settings snapshot (one source of truth for the settings page
+  // The shared settings snapshot (one source of truth for the settings card
   // and the composer control; both bind it through the slots hooks seat).
+  // The scope starts 'loading' (value undefined) until the first accepted
+  // Host section, so the adapter falls back to the schema default.
   // The reserved `hooks` compartment must hold HostObservable sources — the
   // slot system binds them into `use<Name>` selector hooks and REMOVES them
   // from the component props (the dsh-at-file `hooks: { scope }` pattern).
   const settingsSnapshot: import('@deepseek-ai/dsh-client-runtime/client').ObservableSnapshot<GhIssueSettings> = {
-    getSnapshot: () => settings,
-    subscribe: subscribeSettings,
+    getSnapshot: () => ghScope.getSnapshot().value ?? { insertFormat: 'ref' },
+    subscribe: listener => ghScope.subscribe(listener),
   }
 
   // The composer control: an icon in the input box's right tool row. Clicking
@@ -124,24 +119,17 @@ export function apply(ctx: ClientContext): void {
     return dispose
   }, 'dsh-github-picker: composer input slot')
 
-  // The settings section: insert format and the gh account-connection status
-  // card. The repository is always resolved from the workspace git remote —
-  // no override field, no enable switch.
-  ctx.slots.inject('settings.section', () => ctx.slots.register({
-    name: 'settings.section',
-    id: 'github-settings',
-    order: 55,
-    label: () => t('nav'),
+  // The official plugin-configuration card (insert format + the gh
+  // account-connection card). The tab pairs this keyed registration with the
+  // host-served `github-picker` namespace; the card's `update` writes the
+  // insert format straight through the bound settings scope.
+  ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
+    name: 'settings.plugin.item',
+    key: 'github-picker',
     locale: NS,
     inject: (): SettingsSectionInjected => ({
       hooks: { settings: settingsSnapshot },
-      update: async (update: GhIssueSettingsUpdate) => {
-        if (remote === undefined) throw new Error('dsh-github-picker: the githubPicker Remote is not mounted')
-        const result = await remote.updateSettings(update)
-        if (!result.ok) throw new Error(result.error.message)
-        settings = result.value
-        notifySettings()
-      },
+      update: (update: GhIssueSettingsUpdate) => ghScope.set(update.field, update.value),
       getGhAuthStatus: async () => {
         if (remote === undefined) throw new Error('dsh-github-picker: the githubPicker Remote is not mounted')
         const result = await remote.getGhAuthStatus()

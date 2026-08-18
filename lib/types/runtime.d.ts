@@ -5,15 +5,16 @@
  * client under `/api/githubPicker/<method>` with zero generated artifacts:
  * `search` takes the resolved live Agent (the `agent` Typert lookup) and
  * searches its workspace repository through the gh CLI only (no device flow,
- * no stored tokens); `getSettings`/`updateSettings` serve the durable
- * settings (insert format) over the plugin-owned scope; `getGhAuthStatus`
- * reports the gh account-connection status for the settings page. The Host
- * only marks validated `#number` references at `agent/pre-step`.
+ * no stored tokens); `getGhAuthStatus` reports the gh account-connection
+ * status for the settings card. The durable settings (insert format) live in
+ * the plugin-owned settings namespace and reach the browser through the
+ * official settings scope — no wire method serves them. The Host only marks
+ * validated `#number` references at `agent/pre-step`.
  */
 import type { Context } from '@deepseek-ai/cordis';
 import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import type { Agent } from '@deepseek-ai/dsh-agent';
-import type { GhAuthStatus, GhIssueSettings, GhIssueSettingsUpdate, GitHubRepoRef, GitHubSearchResult } from './contract.ts';
+import type { GhAuthStatus, GitHubRepoRef, GitHubSearchResult } from './contract.ts';
 import type { ResolvedConfig } from './types.ts';
 import type { SearchProvider } from './providers/contract.ts';
 import type { GhCommand } from './providers/gh.ts';
@@ -27,8 +28,6 @@ export interface GhDeps {
 /** Gh-issue workspace service: search the agent's repository for the composer picker. */
 export declare class GhIssueRuntime extends TypertRemoteService {
     private readonly config;
-    private readonly readSettings;
-    private readonly writeSettings;
     private readonly gh;
     private readonly ghCommand;
     private readonly authTimeoutMs;
@@ -37,17 +36,11 @@ export declare class GhIssueRuntime extends TypertRemoteService {
      * Register the service under the `githubPicker` key (the wire namespace).
      * @param ctx - owning cordis context.
      * @param config - resolved plugin configuration.
-     * @param readSettings - live settings read for the insert format.
-     * @param writeSettings - durable settings write returning the resolved section.
      * @param gh - the gh CLI search provider.
      * @param ghCommand - the gh subprocess runner (auth status + search share the seam).
      * @param authTimeoutMs - subprocess timeout for the auth-status probe.
      */
-    constructor(ctx: Context, config: ResolvedConfig, readSettings: () => GhIssueSettings, writeSettings: (update: GhIssueSettingsUpdate) => Promise<GhIssueSettings>, gh: SearchProvider, ghCommand: GhCommand, authTimeoutMs: number);
-    /** Read the resolved durable settings through the plugin-owned wire. */
-    getSettings(): GhIssueSettings;
-    /** Persist one settings field and return the resolved section. */
-    updateSettings(update: GhIssueSettingsUpdate): Promise<GhIssueSettings>;
+    constructor(ctx: Context, config: ResolvedConfig, gh: SearchProvider, ghCommand: GhCommand, authTimeoutMs: number);
     /**
      * Search one page of the addressed agent's repository for issues and pull
      * requests through the gh CLI. The popup loads page 1 on open and fetches

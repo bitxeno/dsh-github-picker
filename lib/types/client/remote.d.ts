@@ -6,21 +6,17 @@
  */
 import type { RemoteResult, TypertRemoteContribution } from '@deepseek-ai/dsh-typert-protocol';
 import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client';
-import type { GhAuthStatus, GhIssueSettings, GhIssueSettingsUpdate, GitHubSearchResult } from '../contract.ts';
+import type { GhAuthStatus, GitHubSearchResult } from '../contract.ts';
 /** The githubPicker Remote namespace's client contribution. */
 export declare const GH_ISSUE_REMOTE: TypertRemoteContribution;
 declare module '@deepseek-ai/dsh-typert-protocol' {
     /** The `githubPicker` namespace face mounted under `ctx.remote.githubPicker`. */
     interface TypertRemoteNamespace$6769746875625069636b6572 {
         search: (query: string, page: number, agentId: SessionId, signal?: AbortSignal) => Promise<RemoteResult<GitHubSearchResult>>;
-        getSettings: () => Promise<RemoteResult<GhIssueSettings>>;
-        updateSettings: (update: GhIssueSettingsUpdate) => Promise<RemoteResult<GhIssueSettings>>;
         getGhAuthStatus: () => Promise<RemoteResult<GhAuthStatus>>;
     }
     interface TypertRemoteMap {
         'githubPicker/search': (query: string, page: number, agentId: SessionId, signal?: AbortSignal) => Promise<RemoteResult<GitHubSearchResult>>;
-        'githubPicker/getSettings': () => Promise<RemoteResult<GhIssueSettings>>;
-        'githubPicker/updateSettings': (update: GhIssueSettingsUpdate) => Promise<RemoteResult<GhIssueSettings>>;
         'githubPicker/getGhAuthStatus': () => Promise<RemoteResult<GhAuthStatus>>;
     }
     interface TypertRemoteNamespaceMap {

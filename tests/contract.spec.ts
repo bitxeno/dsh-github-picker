@@ -3,12 +3,11 @@ import { describe, expect, it } from 'vitest'
 import {
   ghAuthAccountSchema,
   ghAuthStatusSchema,
-  ghIssueSettingsSchema,
-  ghIssueSettingsUpdateSchema,
   gitHubEntrySchema,
   gitHubRepoRefSchema,
   gitHubSearchResultSchema,
 } from '../src/contract.ts'
+import { GH_ISSUE_NAMESPACE, GhIssueSettingsSchema } from '../src/settings.ts'
 
 describe('ghIssue wire codecs', () => {
   it('round-trips one issue entry', () => {
@@ -44,21 +43,21 @@ describe('ghIssue wire codecs', () => {
     expect(() => gitHubSearchResultSchema.parse({ ...value, source: 'api' })).toThrow()
   })
 
-  it('round-trips settings and the field updates', () => {
-    const settings = { insertFormat: 'ref' }
-    expect(ghIssueSettingsSchema.parse(settings)).toEqual(settings)
-    expect(ghIssueSettingsUpdateSchema.parse({ field: 'insertFormat', value: 'url' })).toEqual({ field: 'insertFormat', value: 'url' })
-    expect(() => ghIssueSettingsUpdateSchema.parse({ field: 'insertFormat', value: 'html' })).toThrow()
-    // The result limit is gone with the endless scroll pagination.
-    expect(() => ghIssueSettingsUpdateSchema.parse({ field: 'defaultLimit', value: 50 })).toThrow()
-    expect(ghIssueSettingsSchema.parse({ insertFormat: 'ref', defaultLimit: 20 })).toEqual({ insertFormat: 'ref' })
-    // The enable switch is gone with the update surface.
-    expect(() => ghIssueSettingsUpdateSchema.parse({ field: 'enabled', value: true })).toThrow()
-    expect(() => ghIssueSettingsUpdateSchema.parse({ field: 'nope', value: 1 })).toThrow()
-    // The mode/clientId/scope/repo fields are gone with the device flow and
-    // the repository override.
-    expect(() => ghIssueSettingsUpdateSchema.parse({ field: 'mode', value: 'api' })).toThrow()
-    expect(() => ghIssueSettingsUpdateSchema.parse({ field: 'repo', value: 'o/r' })).toThrow()
+  it('shapes the github-picker settings namespace section', () => {
+    // The settings reach the browser through the official settings scope
+    // (namespace-schema resolved), so the namespace identity and its
+    // Schemastery schema are the whole settings contract.
+    expect(GH_ISSUE_NAMESPACE).toBe('github-picker')
+    // The insert-format default stands when the section comes back empty.
+    expect(GhIssueSettingsSchema.type).toBe('object')
+    expect(Object.keys(GhIssueSettingsSchema.dict)).toEqual(['insertFormat'])
+    const insertFormat = GhIssueSettingsSchema.dict.insertFormat
+    expect(insertFormat.type).toBe('union')
+    expect(insertFormat.toString()).toBe('"url" | "ref"')
+    expect(insertFormat.meta.default).toBe('ref')
+    // The result limit and the enable switch are gone with the endless-scroll
+    // pagination and the always-on surface.
+    expect(insertFormat.toString()).not.toMatch(/limit|enabled/)
   })
 
   it('round-trips the gh account-connection status', () => {

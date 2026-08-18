@@ -5,18 +5,17 @@
  * client under `/api/githubPicker/<method>` with zero generated artifacts:
  * `search` takes the resolved live Agent (the `agent` Typert lookup) and
  * searches its workspace repository through the gh CLI only (no device flow,
- * no stored tokens); `getSettings`/`updateSettings` serve the durable
- * settings (insert format) over the plugin-owned scope; `getGhAuthStatus`
- * reports the gh account-connection status for the settings page. The Host
- * only marks validated `#number` references at `agent/pre-step`.
+ * no stored tokens); `getGhAuthStatus` reports the gh account-connection
+ * status for the settings card. The durable settings (insert format) live in
+ * the plugin-owned settings namespace and reach the browser through the
+ * official settings scope — no wire method serves them. The Host only marks
+ * validated `#number` references at `agent/pre-step`.
  */
 import type { Context } from '@deepseek-ai/cordis'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type {
   GhAuthStatus,
-  GhIssueSettings,
-  GhIssueSettingsUpdate,
   GitHubRepoRef,
   GitHubSearchResult,
 } from './contract.ts'
@@ -43,8 +42,6 @@ export class GhIssueRuntime extends TypertRemoteService {
    * Register the service under the `githubPicker` key (the wire namespace).
    * @param ctx - owning cordis context.
    * @param config - resolved plugin configuration.
-   * @param readSettings - live settings read for the insert format.
-   * @param writeSettings - durable settings write returning the resolved section.
    * @param gh - the gh CLI search provider.
    * @param ghCommand - the gh subprocess runner (auth status + search share the seam).
    * @param authTimeoutMs - subprocess timeout for the auth-status probe.
@@ -52,26 +49,12 @@ export class GhIssueRuntime extends TypertRemoteService {
   constructor(
     ctx: Context,
     private readonly config: ResolvedConfig,
-    private readonly readSettings: () => GhIssueSettings,
-    private readonly writeSettings: (update: GhIssueSettingsUpdate) => Promise<GhIssueSettings>,
     private readonly gh: SearchProvider,
     private readonly ghCommand: GhCommand,
     private readonly authTimeoutMs: number,
   ) {
     super(ctx, 'githubPicker')
     this.resolver = new RepoResolver(undefined, undefined, config.repoCacheTtl)
-  }
-
-  /** Read the resolved durable settings through the plugin-owned wire. */
-  @Remote
-  getSettings(): GhIssueSettings {
-    return this.readSettings()
-  }
-
-  /** Persist one settings field and return the resolved section. */
-  @Remote
-  updateSettings(update: GhIssueSettingsUpdate): Promise<GhIssueSettings> {
-    return this.writeSettings(update)
   }
 
   /**

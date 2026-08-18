@@ -1,12 +1,13 @@
 /**
- * The dsh-github-picker wire contract, shared verbatim by the host manifest
+* The dsh-github-picker wire contract, shared verbatim by the host manifest
  * (`ctx.typert.register` in typert.ts) and the client contribution
  * (`ctx.remote.$mount` in client/remote.ts). The service exposes GitHub
  * issue/PR search for the browser's composer picker (through the gh CLI
- * only, no device flow), the plugin-owned settings (insert format — there is
- * no enable switch, the picker is always on), and the gh account-connection
- * status. Issue bodies and tokens never cross this boundary: the Host only
- * marks validated `#number` references at `agent/pre-step`.
+ * only, no device flow) and the gh account-connection status. The durable
+ * settings (insert format) live in the plugin-owned settings namespace and
+ * reach the browser through the official settings scope — they never travel
+ * this wire. Issue bodies and tokens never cross this boundary either: the
+ * Host only marks validated `#number` references at `agent/pre-step`.
  */
 import { z } from 'zod'
 import type { InvocationDescriptor } from '@deepseek-ai/dsh-typert-protocol'
@@ -50,7 +51,7 @@ export interface GhIssueSettings {
   readonly insertFormat: 'url' | 'ref'
 }
 
-/** One field update sent through the plugin-owned settings Remote. */
+/** One field update sent through the plugin-owned settings scope. */
 export type GhIssueSettingsUpdate =
   | { readonly field: 'insertFormat'; readonly value: 'url' | 'ref' }
 
@@ -98,16 +99,6 @@ export const gitHubSearchResultSchema = z.object({
   source: z.literal('gh'),
   truncated: z.boolean(),
 }).readonly()
-
-/** Wire codec: the resolved github-picker settings section. */
-export const ghIssueSettingsSchema = z.object({
-  insertFormat: z.enum(['url', 'ref']),
-}).readonly()
-
-/** Wire codec: one field update. */
-export const ghIssueSettingsUpdateSchema = z.discriminatedUnion('field', [
-  z.object({ field: z.literal('insertFormat'), value: z.enum(['url', 'ref']) }).readonly(),
-])
 
 /** Wire codec: one logged-in gh account. */
 export const ghAuthAccountSchema = z.object({
@@ -159,43 +150,6 @@ export const GH_ISSUE_INVOCATIONS: readonly InvocationDescriptor[] = [
       mode: 'strict',
       typeSymbol: 'dsh-github-picker#GitHubSearchResult',
       schema: gitHubSearchResultSchema,
-    },
-  },
-  {
-    id: 'dsh-github-picker#githubPicker/getSettings',
-    service: 'githubPicker',
-    namespace: 'githubPicker',
-    method: 'getSettings',
-    invocation: { kind: 'direct' },
-    parameters: [],
-    result: {
-      mode: 'strict',
-      typeSymbol: 'dsh-github-picker#GhIssueSettings',
-      schema: ghIssueSettingsSchema,
-    },
-  },
-  {
-    id: 'dsh-github-picker#githubPicker/updateSettings',
-    service: 'githubPicker',
-    namespace: 'githubPicker',
-    method: 'updateSettings',
-    invocation: { kind: 'direct' },
-    parameters: [
-      {
-        name: 'update',
-        wire: 'update',
-        source: 'json',
-        codec: {
-          mode: 'strict',
-          typeSymbol: 'dsh-github-picker#GhIssueSettingsUpdate',
-          schema: ghIssueSettingsUpdateSchema,
-        },
-      },
-    ],
-    result: {
-      mode: 'strict',
-      typeSymbol: 'dsh-github-picker#GhIssueSettings',
-      schema: ghIssueSettingsSchema,
     },
   },
   {

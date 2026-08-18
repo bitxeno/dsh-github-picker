@@ -15,7 +15,7 @@ export interface SettingsSectionInjected {
     update(update: GhIssueSettingsUpdate): Promise<void>;
     getGhAuthStatus(): Promise<GhAuthStatus>;
 }
-/** Full section props: runtime share + injected face + locale seat. */
-export type SettingsSectionProps = PropsRuntime<'settings.section'> & InjectFace<SettingsSectionInjected> & PropsLocale<typeof NS>;
+/** Full card props: runtime share + injected face + locale seat. */
+export type SettingsSectionProps = PropsRuntime<'settings.plugin.item'> & InjectFace<SettingsSectionInjected> & PropsLocale<typeof NS>;
 /** The settings section component. */
 export declare function GhIssueSection({ useSettings, update, getGhAuthStatus, t }: SettingsSectionProps): import("react").JSX.Element;

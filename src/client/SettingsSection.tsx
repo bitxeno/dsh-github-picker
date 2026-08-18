@@ -1,11 +1,12 @@
 /**
- * The settings page section for dsh-github-picker: the insert format and the
- * gh CLI account-connection status card. Reads and writes go through the
- * plugin-owned settings snapshot and the Remote updateSettings path — the
- * public DSH package does not expose the github-picker namespace to the browser.
- * There is no enable switch and no result limit: the picker is always on and
- * the popup scrolls through every page the provider returns. All dsh imports
- * are type-only.
+ * The plugin-configuration card for dsh-github-picker: the insert format and
+ * the gh CLI account-connection status card. Registers into the official
+ * `settings.plugin.item` slot under the `github-picker` namespace key; reads
+ * and writes go through the bound settings scope (the official settings
+ * transport — the plugin's own namespace is served by the Host directly, no
+ * custom wire method). There is no enable switch and no result limit: the
+ * picker is always on and the popup scrolls through every page the provider
+ * returns. All dsh imports are type-only.
  */
 import { useEffect, useState } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
@@ -28,8 +29,8 @@ export interface SettingsSectionInjected {
   getGhAuthStatus(): Promise<GhAuthStatus>
 }
 
-/** Full section props: runtime share + injected face + locale seat. */
-export type SettingsSectionProps = PropsRuntime<'settings.section'> & InjectFace<SettingsSectionInjected> & PropsLocale<typeof NS>
+/** Full card props: runtime share + injected face + locale seat. */
+export type SettingsSectionProps = PropsRuntime<'settings.plugin.item'> & InjectFace<SettingsSectionInjected> & PropsLocale<typeof NS>
 
 /** The gh account-connection card's live state. */
 type AuthCardState =

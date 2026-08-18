@@ -29,15 +29,18 @@ function agentWith(cwd: string | undefined): Agent {
 }
 
 /** A settings provider stub whose value is switchable per test. */
-function settingsProvider(read: () => GhIssueSettings) {
+function settingsProvider(
+  read: () => GhIssueSettings,
+  register?: (namespace: unknown, schema: unknown, options: unknown) => unknown,
+) {
   let patch: Partial<GhIssueSettings> = {}
   return {
-    register: () => ({
+    register: register ?? (() => ({
       get: () => ({ ...read(), ...patch }),
       watch: () => () => {},
       update: async (next: Partial<GhIssueSettings>) => { patch = { ...patch, ...next } },
       replace: async () => {},
-    }),
+    })),
   }
 }
 
@@ -103,32 +106,40 @@ describe('dsh-github-picker host composition', () => {
     const { fiber, service } = await mount(ctx)
     const original = service as unknown as GhIssueRuntime
     const methods = remoteMethods(original) as readonly { method: string }[]
-    for (const expected of ['search', 'getSettings', 'updateSettings', 'getGhAuthStatus']) {
+    for (const expected of ['search', 'getGhAuthStatus']) {
       expect(methods.some(marker => marker.method === expected), `missing @Remote ${expected}`).toBe(true)
     }
     // No device-flow methods remain.
     for (const gone of ['getAuthState', 'beginDeviceFlow', 'pollDeviceFlow', 'signOut']) {
       expect(methods.some(marker => marker.method === gone), `stale @Remote ${gone}`).toBe(false)
     }
+    // The settings are owned by the plugin namespace; no wire method serves them.
+    for (const gone of ['getSettings', 'updateSettings']) {
+      expect(methods.some(marker => marker.method === gone), `stale @Remote ${gone}`).toBe(false)
+    }
     await fiber.dispose()
   })
 
-  it('serves settings reads and field writes through the wire', async () => {
+  it('registers the github-picker settings namespace with live semantics', async () => {
+    const registrations: Array<{ namespace: unknown; options: unknown }> = []
+    const captureRegister: (namespace: unknown, schema: unknown, options: unknown) => unknown = (namespace, _schema, options) => {
+      registrations.push({ namespace, options })
+      return {
+        get: () => defaultSettings(),
+        watch: () => () => {},
+        update: async () => {},
+        replace: async () => {},
+      }
+    }
     const ctx = new Context()
-    const { fiber, service } = await mount(ctx)
-    const original = service as unknown as GhIssueRuntime
-    expect(original.getSettings()).toEqual(defaultSettings())
-    await original.updateSettings({ field: 'insertFormat', value: 'url' })
-    expect(original.getSettings()).toEqual({ insertFormat: 'url' })
-    await fiber.dispose()
-  })
-
-  it('persists the insert format through the wire', async () => {
-    const ctx = new Context()
-    const { fiber, service } = await mount(ctx)
-    const original = service as unknown as GhIssueRuntime
-    await original.updateSettings({ field: 'insertFormat', value: 'url' })
-    expect(original.getSettings().insertFormat).toBe('url')
+    const registryFiber = ctx.plugin(TypertRegistry)
+    await registryFiber
+    ctx.provide('settings', settingsProvider(defaultSettings, captureRegister))
+    ctx.provide('agents', { roots: () => [] })
+    const fiber = ctx.plugin({ inject: plugin.inject, apply: plugin.apply })
+    await fiber
+    expect(registrations.map(entry => entry.namespace)).toEqual(['github-picker'])
+    expect(registrations[0].options).toEqual({ applies: 'live' })
     await fiber.dispose()
   })
 

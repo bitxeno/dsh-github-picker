@@ -1,12 +1,13 @@
 /**
- * The dsh-github-picker wire contract, shared verbatim by the host manifest
+* The dsh-github-picker wire contract, shared verbatim by the host manifest
  * (`ctx.typert.register` in typert.ts) and the client contribution
  * (`ctx.remote.$mount` in client/remote.ts). The service exposes GitHub
  * issue/PR search for the browser's composer picker (through the gh CLI
- * only, no device flow), the plugin-owned settings (insert format — there is
- * no enable switch, the picker is always on), and the gh account-connection
- * status. Issue bodies and tokens never cross this boundary: the Host only
- * marks validated `#number` references at `agent/pre-step`.
+ * only, no device flow) and the gh account-connection status. The durable
+ * settings (insert format) live in the plugin-owned settings namespace and
+ * reach the browser through the official settings scope — they never travel
+ * this wire. Issue bodies and tokens never cross this boundary either: the
+ * Host only marks validated `#number` references at `agent/pre-step`.
  */
 import { z } from 'zod';
 import type { InvocationDescriptor } from '@deepseek-ai/dsh-typert-protocol';
@@ -44,7 +45,7 @@ export interface GhIssueSettings {
     /** Inserted reference format: the @owner/repo#number form (default) or the plain GitHub URL. */
     readonly insertFormat: 'url' | 'ref';
 }
-/** One field update sent through the plugin-owned settings Remote. */
+/** One field update sent through the plugin-owned settings scope. */
 export type GhIssueSettingsUpdate = {
     readonly field: 'insertFormat';
     readonly value: 'url' | 'ref';
@@ -112,21 +113,6 @@ export declare const gitHubSearchResultSchema: z.ZodReadonly<z.ZodObject<{
     source: z.ZodLiteral<"gh">;
     truncated: z.ZodBoolean;
 }, z.core.$strip>>;
-/** Wire codec: the resolved github-picker settings section. */
-export declare const ghIssueSettingsSchema: z.ZodReadonly<z.ZodObject<{
-    insertFormat: z.ZodEnum<{
-        url: "url";
-        ref: "ref";
-    }>;
-}, z.core.$strip>>;
-/** Wire codec: one field update. */
-export declare const ghIssueSettingsUpdateSchema: z.ZodDiscriminatedUnion<[z.ZodReadonly<z.ZodObject<{
-    field: z.ZodLiteral<"insertFormat">;
-    value: z.ZodEnum<{
-        url: "url";
-        ref: "ref";
-    }>;
-}, z.core.$strip>>], "field">;
 /** Wire codec: one logged-in gh account. */
 export declare const ghAuthAccountSchema: z.ZodReadonly<z.ZodObject<{
     host: z.ZodString;

@@ -2,12 +2,13 @@
  * dsh-github-picker host plugin: mounts the `githubPicker` Typert Remote service
  * (GitHub issue/PR search for the browser's composer picker), registers its
  * strict Typert manifest, and registers the settings namespace (insert
- * format; there is no enable switch — the picker is always on). All data
- * flows through the gh CLI — there is no device flow and nothing is stored.
- * The plugin never reads issue bodies; the Host marks validated `#number`
- * references at each agent's pre-step boundary. The client half ships in the
- * same package (`./client`); the web server serves it under
- * /plugins/dsh-github-picker/client.js.
+ * format; there is no enable switch — the picker is always on). The settings
+ * page card binds that namespace through the official settings scope; this
+ * half only serves it. All data flows through the gh CLI — there is no
+ * device flow and nothing is stored. The plugin never reads issue bodies;
+ * the Host marks validated `#number` references at each agent's pre-step
+ * boundary. The client half ships in the same package (`./client`); the web
+ * server serves it under /plugins/dsh-github-picker/client.js.
  */
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
@@ -21,7 +22,7 @@ import { TYPERT_MANIFEST } from './typert.ts'
 import { registerGhIssueSettings } from './settings.ts'
 import { GhProvider, ghCommand } from './providers/gh.ts'
 import { mentionPreStep, type MentionRepoResolver } from './mention.ts'
-import { PICKER_PAGE_SIZE, type GhIssueSettings, type GhIssueSettingsUpdate } from './contract.ts'
+import { PICKER_PAGE_SIZE } from './contract.ts'
 import { resolveConfig, type ConfigInput, type ResolvedConfig } from './types.ts'
 
 /** Cordis plugin name (the Loader entry and client bundle id). */
@@ -52,24 +53,14 @@ export const Config = z.object({
  */
 export function apply(ctx: Context, config?: Config): void {
   const resolved: ResolvedConfig = resolveConfig(config)
-  // The durable settings: the runtime reads its live value per call, so
-  // changing the insert format in the Web settings takes effect immediately.
-  const scope = registerGhIssueSettings(ctx)
-  const readSettings = () => scope.get()
-  const writeSettings = async (update: GhIssueSettingsUpdate): Promise<GhIssueSettings> => {
-    switch (update.field) {
-      case 'insertFormat':
-        await scope.update({ insertFormat: update.value })
-        break
-    }
-    return scope.get()
-  }
+  // The durable settings namespace: the official plugin-configuration card in
+  // the browser binds it through `settingsScope` — the runtime needs no read
+  // or write seam for the insert format.
+  registerGhIssueSettings(ctx)
   const gh = new GhProvider({ perPage: PICKER_PAGE_SIZE, timeoutMs: resolved.searchTimeoutMs })
   const runtime = new GhIssueRuntime(
     ctx,
     resolved,
-    readSettings,
-    writeSettings,
     gh,
     ghCommand,
     resolved.searchTimeoutMs,

@@ -11,8 +11,8 @@ level).
 
 ```
 src/index.ts        host entry: function plugin (name/inject/Config/apply, no default export)
-src/runtime.ts      GhIssueRuntime (TypertRemoteService, @Remote search/getSettings/
-                    updateSettings/getGhAuthStatus) — wire namespace `githubPicker`
+src/runtime.ts      GhIssueRuntime (TypertRemoteService, @Remote search/getGhAuthStatus) —
+                    wire namespace `githubPicker`
 src/mention.ts      Host pre-step scanner: URLs, @owner/repo#number, and bare #number
                     → <github-reference> markers (source `github-picker-mention`)
 src/contract.ts     one shared descriptor set + zod codecs + entry/config types
@@ -26,16 +26,18 @@ src/providers/      SearchProvider seam: gh.ts only (gh api search/issues, NDJSO
 src/invariant.ts    ./invariant companion (real `No runtime invariant:` reason)
 src/client/         browser half, served as the single file /plugins/dsh-github-picker/client.js
   index.ts          apply: $mount the Remote contribution, per-session cache, the composer
-                    slot registration, locale, styles, the settings.section registration
+                    slot registration (hooks/settings via the bound settings scope), locale,
+                    styles, and the settings.plugin.item card registration (keyed)
   picker.tsx        the composer control for `conversation.input.right` (list slot, id
                     'gh-issue-picker', order 100): a GitHub-mark button whose popup is a
                     plain sibling (absolute, bottom: calc(100% + 8px), right: 0). Opens a
                     searchable list from the host search (12 per page; scrolling to the
                     bottom fetches the next page), filters locally via search.ts,
                     inserts via inputActions.setDraft, failure hint row (localized, unpickable)
-  SettingsSection.tsx  settings.section (id 'github-settings', order 55): the gh connection
-                    card (via gh CLI) + the insert-format select. No enable switch,
-                    no result limit — the popup scrolls through every page.
+  SettingsSection.tsx  the settings.plugin.item card (keyed 'github-picker'): the gh
+                    connection card (via gh CLI) + the insert-format select, reading and
+                    writing the namespace through the bound settings scope. No enable
+                    switch, no result limit — the popup scrolls through every page.
   styles.ts         settings-section stylesheet (`--dsw-alias-*` tokens, `dsh_atGh` prefix);
                     the picker popup styles are inline in picker.tsx
   remote.ts         the shared-descriptors client contribution for ctx.remote.$mount
@@ -52,15 +54,13 @@ tests/              node-env specs (11 files); jsdom pragma where a browser API 
 
 ## Contracts with the harness (do not drift)
 
-- The wire endpoints are `githubPicker/search`, `githubPicker/getSettings`,
-  `githubPicker/updateSettings`, and `githubPicker/getGhAuthStatus` (the
-  gateway route is `/api/githubPicker/*`). These names are distinct from the
+- The wire endpoints are `githubPicker/search` and `githubPicker/getGhAuthStatus`
+  (the gateway route is `/api/githubPicker/*`). These names are distinct from the
   sibling `dsh-at-github` plugin's `ghIssue/*` wire namespace, its `gh-issue`
   settings/locale namespaces, and its `gh-issue-mention` reference source — the
-  two plugins may be installed side by side. Search results,
-  the settings section (insert format), and the gh account-connection status
-  cross the wire; no token material ever does — the plugin only reads `gh
-  auth status` facts and never stores any credential.
+  two plugins may be installed side by side. Search results and the gh
+  account-connection status cross the wire; no token material ever does — the
+  plugin only reads `gh auth status` facts and never stores any credential.
 - The Host Gateway resolves the endpoint through the **strict Typert manifest**
   (`src/typert.ts`, registered via `ctx.typert.register`) — never through
   `@Remote` marker tables, because the harness's source-launch dev
@@ -72,17 +72,25 @@ tests/              node-env specs (11 files); jsdom pragma where a browser API 
   `typeSymbol` must stay `@deepseek-ai/dsh-session/types#SessionId`.
 - The plugin registers the `github-picker` namespace through `ctx.settings.register`
   — **no enable switch exists, the picker is always on** and the namespace
-  holds only `insertFormat`. The public DSH package does
-  not expose that namespace through `WEB_SETTINGS_NAMESPACES`; browser reads
-  and writes MUST use `githubPicker/getSettings` and
-  `githubPicker/updateSettings` (the Host methods own normalization and call
-  the owner settings scope).
+  holds only `insertFormat`. Browser reads and writes MUST go through the
+  official settings scope (`ctx.settingsScope.bind({ namespace: 'github-picker' })`
+  in `src/client/index.ts`): the page card reads via `useSettings` (the slots
+  hooks seat over a snapshot adapter) and writes via `scope.set(field, value)`,
+  which owns revision fencing and recovery. No wire method serves the setting —
+  the Host methods were removed when the card moved onto the scope.
 - The client composes only through the standing seams (`ctx.remote.$mount`,
   `ctx.slots.register`, `ctx.locale.register`). The mounted Remote namespace
   is resolved through
   `ctx.reflect.get('remote.githubPicker')` — NOT the dotted
   `ctx.remote.githubPicker` read, which walks the fiber chain and stops at the
   Loader's runtime-less forks.
+- **The settings card is a keyed `settings.plugin.item` registration**
+  (`ctx.slots.inject('settings.plugin.item', ...)` with `key: 'github-picker'`
+  in `src/client/index.ts`; `src/client/remote.ts` imports the slot's type
+  declaration from `dsh-client-ui-settings-plugins`). The official
+  configurable-plugins tab pairs it with the namespace the Host serves, so the
+  card dispatches without a settings wire method. The `settings.section`
+  slot and the socket-style section id/order options are gone.
 - **The picker is a plain component in the `conversation.input.right` list
   slot** (the seat just before the send button), mounted with
   `ctx.slots.inject('conversation.input.right', () => ctx.slots.register(...))`

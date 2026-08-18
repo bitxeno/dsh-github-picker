@@ -2,12 +2,13 @@
  * dsh-github-picker host plugin: mounts the `githubPicker` Typert Remote service
  * (GitHub issue/PR search for the browser's composer picker), registers its
  * strict Typert manifest, and registers the settings namespace (insert
- * format; there is no enable switch — the picker is always on). All data
- * flows through the gh CLI — there is no device flow and nothing is stored.
- * The plugin never reads issue bodies; the Host marks validated `#number`
- * references at each agent's pre-step boundary. The client half ships in the
- * same package (`./client`); the web server serves it under
- * /plugins/dsh-github-picker/client.js.
+ * format; there is no enable switch — the picker is always on). The settings
+ * page card binds that namespace through the official settings scope; this
+ * half only serves it. All data flows through the gh CLI — there is no
+ * device flow and nothing is stored. The plugin never reads issue bodies;
+ * the Host marks validated `#number` references at each agent's pre-step
+ * boundary. The client half ships in the same package (`./client`); the web
+ * server serves it under /plugins/dsh-github-picker/client.js.
  */
 import type { Context } from '@deepseek-ai/cordis';
 import z from '@deepseek-ai/schemastery';

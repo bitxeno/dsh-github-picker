@@ -36,6 +36,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-settings':
         specifier: link:../../cxf/.npm/_npx/1e7f6d9597241db0/node_modules/@deepseek-ai/dsh-client-ui-settings
         version: link:../../cxf/.npm/_npx/1e7f6d9597241db0/node_modules/@deepseek-ai/dsh-client-ui-settings
+      '@deepseek-ai/dsh-client-ui-settings-plugins':
+        specifier: link:../../cxf/.npm/_npx/1e7f6d9597241db0/node_modules/@deepseek-ai/dsh-client-ui-settings-plugins
+        version: link:../../cxf/.npm/_npx/1e7f6d9597241db0/node_modules/@deepseek-ai/dsh-client-ui-settings-plugins
       '@deepseek-ai/dsh-client-ui-slots':
         specifier: link:../../cxf/.npm/_npx/1e7f6d9597241db0/node_modules/@deepseek-ai/dsh-client-ui-slots
         version: link:../../cxf/.npm/_npx/1e7f6d9597241db0/node_modules/@deepseek-ai/dsh-client-ui-slots

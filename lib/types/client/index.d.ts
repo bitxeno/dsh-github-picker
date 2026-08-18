@@ -1,5 +1,5 @@
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client';
-/** Required services: the Remote face, the slot registry, and locale. */
+/** Required services: the Remote face, the slot registry, locale, and the settings scope. */
 export declare const inject: string[];
 /**
  * Compose the GitHub picker surface.
