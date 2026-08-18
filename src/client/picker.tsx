@@ -20,15 +20,15 @@ import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ObservableSnapshot, SessionId } from '@deepseek-ai/dsh-client-runtime/client'
-import type { GitHubEntry, GitHubRepoRef, GitHubSearchResult, GhIssueSettings } from '../contract.ts'
+import type { GitHubEntry, GitHubRepoRef, GitHubSearchResult, GhPickerSettings } from '../contract.ts'
 import type { SearchErrorKind } from './search.ts'
 import { rankEntries } from './search.ts'
 import { AlertIcon, GitHubMarkIcon, ghIcon } from './icons.tsx'
-import type { NS, GhIssueKey } from './locales.ts'
+import type { NS, GhPickerKey } from './locales.ts'
 import { RESULT_TTL_MS } from './cache.ts'
 
 /** The locale key of the hint row for one search failure kind. */
-export const ERROR_HINT_KEY: Record<SearchErrorKind, GhIssueKey> = {
+export const ERROR_HINT_KEY: Record<SearchErrorKind, GhPickerKey> = {
   'no-repo': 'picker.no-repo',
   'gh-missing': 'picker.error.gh-missing',
   'not-authenticated': 'picker.error.not-authenticated',
@@ -41,7 +41,7 @@ export const ERROR_HINT_KEY: Record<SearchErrorKind, GhIssueKey> = {
 /** The injected business face (the reserved hooks compartment binds `useSettings`). */
 export interface PickerInjected {
   hooks: {
-    settings: ObservableSnapshot<GhIssueSettings>
+    settings: ObservableSnapshot<GhPickerSettings>
   }
   /** The Remote-backed search seam (per-session, per-page cache, host-owned data). */
   search(query: string, page: number, sessionId: SessionId, signal: AbortSignal): Promise<GitHubSearchResult>
@@ -154,7 +154,7 @@ const statusStyle = {
  * The pick text for one entry under the configured insert format (stays
  * within the mention grammar the Host's pre-step scanner recognizes).
  */
-export function pickText(entry: GitHubEntry, repo: GitHubRepoRef, settings: GhIssueSettings): string {
+export function pickText(entry: GitHubEntry, repo: GitHubRepoRef, settings: GhPickerSettings): string {
   if (settings.insertFormat === 'ref') {
     return `@${repo.owner}/${repo.name}#${entry.number} `
   }
@@ -162,7 +162,7 @@ export function pickText(entry: GitHubEntry, repo: GitHubRepoRef, settings: GhIs
 }
 
 /** The composer picker control: the icon button and its searchable popup. */
-export function GhIssuePickerButton(props: PickerProps): React.ReactElement {
+export function GhPickerButton(props: PickerProps): React.ReactElement {
   const { useSettings, search, t } = props
   const settings = useSettings(snapshot => snapshot)
   const [open, setOpen] = useState(false)

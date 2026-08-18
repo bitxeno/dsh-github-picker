@@ -1,6 +1,6 @@
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-runtime/client';
-import type { GhAuthStatus, GhIssueSettings, GhIssueSettingsUpdate } from '../contract.ts';
+import type { GhAuthStatus, GhPickerSettings, GhPickerSettingsUpdate } from '../contract.ts';
 import type { NS } from './locales.ts';
 /**
  * The injected business face. The reserved `hooks` compartment must carry
@@ -10,12 +10,12 @@ import type { NS } from './locales.ts';
  */
 export interface SettingsSectionInjected {
     hooks: {
-        settings: ObservableSnapshot<GhIssueSettings>;
+        settings: ObservableSnapshot<GhPickerSettings>;
     };
-    update(update: GhIssueSettingsUpdate): Promise<void>;
+    update(update: GhPickerSettingsUpdate): Promise<void>;
     getGhAuthStatus(): Promise<GhAuthStatus>;
 }
 /** Full card props: runtime share + injected face + locale seat. */
 export type SettingsSectionProps = PropsRuntime<'settings.plugin.item'> & InjectFace<SettingsSectionInjected> & PropsLocale<typeof NS>;
 /** The plugin-configuration card component (official PluginCard structure). */
-export declare function GhIssueSection({ useSettings, update, getGhAuthStatus, t }: SettingsSectionProps): import("react").JSX.Element;
+export declare function GhPickerSection({ useSettings, update, getGhAuthStatus, t }: SettingsSectionProps): import("react").JSX.Element;

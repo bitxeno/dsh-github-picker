@@ -11,8 +11,8 @@ import TypertRegistry from '@deepseek-ai/dsh-typert-registry'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as plugin from '../src/index.ts'
-import type { GhIssueRuntime } from '../src/runtime.ts'
-import type { GhIssueSettings } from '../src/contract.ts'
+import type { GhPickerRuntime } from '../src/runtime.ts'
+import type { GhPickerSettings } from '../src/contract.ts'
 
 // The gh provider and repo resolver run real child processes; tests stub the
 // subprocess seam through the module mock so both share one implementation.
@@ -30,22 +30,22 @@ function agentWith(cwd: string | undefined): Agent {
 
 /** A settings provider stub whose value is switchable per test. */
 function settingsProvider(
-  read: () => GhIssueSettings,
+  read: () => GhPickerSettings,
   register?: (namespace: unknown, schema: unknown, options: unknown) => unknown,
 ) {
-  let patch: Partial<GhIssueSettings> = {}
+  let patch: Partial<GhPickerSettings> = {}
   return {
     register: register ?? (() => ({
       get: () => ({ ...read(), ...patch }),
       watch: () => () => {},
-      update: async (next: Partial<GhIssueSettings>) => { patch = { ...patch, ...next } },
+      update: async (next: Partial<GhPickerSettings>) => { patch = { ...patch, ...next } },
       replace: async () => {},
     })),
   }
 }
 
 /** Default settings the tests start from. */
-function defaultSettings(): GhIssueSettings {
+function defaultSettings(): GhPickerSettings {
   return { insertFormat: 'ref' }
 }
 
@@ -53,7 +53,7 @@ function defaultSettings(): GhIssueSettings {
 async function mount(
   ctx: Context,
   config?: plugin.Config,
-  readSettings: () => GhIssueSettings = defaultSettings,
+  readSettings: () => GhPickerSettings = defaultSettings,
 ) {
   const registryFiber = ctx.plugin(TypertRegistry)
   await registryFiber
@@ -61,7 +61,7 @@ async function mount(
   ctx.provide('agents', { roots: () => [] })
   const fiber = ctx.plugin({ inject: plugin.inject, apply: plugin.apply }, config)
   await fiber
-  const service = ctx.get('githubPicker') as unknown as GhIssueRuntime | undefined
+  const service = ctx.get('githubPicker') as unknown as GhPickerRuntime | undefined
   return { fiber, service }
 }
 
@@ -104,7 +104,7 @@ describe('dsh-github-picker host composition', () => {
   it('exposes the gh-only wire methods as @Remote members', async () => {
     const ctx = new Context()
     const { fiber, service } = await mount(ctx)
-    const original = service as unknown as GhIssueRuntime
+    const original = service as unknown as GhPickerRuntime
     const methods = remoteMethods(original) as readonly { method: string }[]
     for (const expected of ['search', 'getGhAuthStatus']) {
       expect(methods.some(marker => marker.method === expected), `missing @Remote ${expected}`).toBe(true)
@@ -146,7 +146,7 @@ describe('dsh-github-picker host composition', () => {
   it('reports a missing workspace directory', async () => {
     const ctx = new Context()
     const { fiber, service } = await mount(ctx)
-    const original = service as unknown as GhIssueRuntime
+    const original = service as unknown as GhPickerRuntime
     const signal = new AbortController().signal
     await expect(original.search('bug', 1, agentWith(undefined), signal)).rejects.toThrow(/no workspace directory/)
     await fiber.dispose()
@@ -163,7 +163,7 @@ describe('dsh-github-picker host composition', () => {
     })
     const ctx = new Context()
     const { fiber, service } = await mount(ctx)
-    const original = service as unknown as GhIssueRuntime
+    const original = service as unknown as GhPickerRuntime
     const signal = new AbortController().signal
     await expect(original.search('bug', 1, agentWith('/tmp'), signal)).rejects.toThrow(/no GitHub repository detected/)
     execMock.mockReset()
@@ -182,7 +182,7 @@ describe('dsh-github-picker host composition', () => {
     })
     const ctx = new Context()
     const { fiber, service } = await mount(ctx)
-    const original = service as unknown as GhIssueRuntime
+    const original = service as unknown as GhPickerRuntime
     const signal = new AbortController().signal
     const result = await original.search('fix', 1, agentWith('/tmp'), signal)
     expect(result.repo).toEqual({ owner: 'o', name: 'r' })
@@ -212,7 +212,7 @@ describe('dsh-github-picker host composition', () => {
     })
     const ctx = new Context()
     const { fiber, service } = await mount(ctx)
-    const original = service as unknown as GhIssueRuntime
+    const original = service as unknown as GhPickerRuntime
     const signal = new AbortController().signal
     const page1 = await original.search('', 1, agentWith('/tmp'), signal)
     expect(page1.entries).toHaveLength(12)
@@ -234,7 +234,7 @@ describe('dsh-github-picker host composition', () => {
     })
     const ctx = new Context()
     const { fiber, service } = await mount(ctx)
-    const original = service as unknown as GhIssueRuntime
+    const original = service as unknown as GhPickerRuntime
     const signal = new AbortController().signal
     const error = await original.search('fix', 1, agentWith('/tmp'), signal).then(
       () => null,
@@ -255,7 +255,7 @@ describe('dsh-github-picker host composition', () => {
     })
     const ctx = new Context()
     const { fiber, service } = await mount(ctx)
-    const original = service as unknown as GhIssueRuntime
+    const original = service as unknown as GhPickerRuntime
     const status = await original.getGhAuthStatus()
     expect(status.accounts).toEqual([
       { host: 'github.com', login: 'bitxeno', active: true, scopes: 'repo, workflow' },
@@ -272,7 +272,7 @@ describe('dsh-github-picker host composition', () => {
     })
     const ctx = new Context()
     const { fiber, service } = await mount(ctx)
-    const original = service as unknown as GhIssueRuntime
+    const original = service as unknown as GhPickerRuntime
     const status = await original.getGhAuthStatus()
     expect(status).toEqual({ accounts: [], error: 'gh-missing' })
     execMock.mockReset()

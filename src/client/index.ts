@@ -23,20 +23,20 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 // Type-only: brings the keyed settings.plugin.item SlotMap declaration (the
 // plugin-configuration tab dispatches one card per served namespace).
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
-import { GH_ISSUE_REMOTE } from './remote.ts'
+import { GH_PICKER_REMOTE } from './remote.ts'
 import { HashCache } from './cache.ts'
 import { classifySearchError, type SearchErrorKind } from './search.ts'
-import { GhIssuePickerButton, type PickerInjected } from './picker.tsx'
-import { GhIssueSection, type SettingsSectionInjected } from './SettingsSection.tsx'
+import { GhPickerButton, type PickerInjected } from './picker.tsx'
+import { GhPickerSection, type SettingsSectionInjected } from './SettingsSection.tsx'
 import { NS, zh, en } from './locales.ts'
 import { adoptStyles } from './styles.ts'
-import type { GhAuthStatus, GhIssueSettings, GhIssueSettingsUpdate, GitHubSearchResult } from '../contract.ts'
+import type { GhAuthStatus, GhPickerSettings, GhPickerSettingsUpdate, GitHubSearchResult } from '../contract.ts'
 
 /** Required services: the Remote face, the slot registry, locale, and the settings scope. */
 export const inject = ['remote', 'slots', 'locale', 'settingsScope']
 
 /** The mounted githubPicker namespace service's callable face. */
-interface GhIssueFace {
+interface GhPickerFace {
   search(query: string, page: number, sessionId: SessionId, signal?: AbortSignal): Promise<{ ok: true; value: GitHubSearchResult } | { ok: false; error: { code: string; message: string; details: object } }>
   getGhAuthStatus(): Promise<{ ok: true; value: GhAuthStatus } | { ok: false; error: { code: string; message: string; details: object } }>
 }
@@ -59,13 +59,13 @@ export function apply(ctx: ClientContext): void {
   // Host's `github-picker` namespace (registered in settings.ts). The card
   // writes through scope.set (revision-fenced); the composer picker reads
   // the same section for its insert format.
-  const ghScope = ctx.settingsScope.bind<GhIssueSettings>({ namespace: 'github-picker' })
+  const ghScope = ctx.settingsScope.bind<GhPickerSettings>({ namespace: 'github-picker' })
 
-  let remote: GhIssueFace | undefined
+  let remote: GhPickerFace | undefined
 
   ctx.effect(async () => {
-    const dispose = await ctx.remote.$mount(GH_ISSUE_REMOTE)
-    remote = (ctx.reflect as unknown as { get(name: string): unknown }).get('remote.githubPicker') as GhIssueFace | undefined
+    const dispose = await ctx.remote.$mount(GH_PICKER_REMOTE)
+    remote = (ctx.reflect as unknown as { get(name: string): unknown }).get('remote.githubPicker') as GhPickerFace | undefined
     if (remote === undefined) {
       throw new Error('dsh-github-picker: the githubPicker Remote namespace did not mount')
     }
@@ -94,7 +94,7 @@ export function apply(ctx: ClientContext): void {
   // The reserved `hooks` compartment must hold HostObservable sources — the
   // slot system binds them into `use<Name>` selector hooks and REMOVES them
   // from the component props (the dsh-at-file `hooks: { scope }` pattern).
-  const settingsSnapshot: import('@deepseek-ai/dsh-client-runtime/client').ObservableSnapshot<GhIssueSettings> = {
+  const settingsSnapshot: import('@deepseek-ai/dsh-client-runtime/client').ObservableSnapshot<GhPickerSettings> = {
     getSnapshot: () => ghScope.getSnapshot().value ?? { insertFormat: 'ref' },
     subscribe: listener => ghScope.subscribe(listener),
   }
@@ -107,7 +107,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => {
     const dispose = ctx.slots.inject('conversation.input.right', () => ctx.slots.register({
       name: 'conversation.input.right',
-      id: 'gh-issue-picker',
+      id: 'gh-picker',
       order: 100,
       label: () => t('nav'),
       locale: NS,
@@ -115,7 +115,7 @@ export function apply(ctx: ClientContext): void {
         hooks: { settings: settingsSnapshot },
         search: (query, page, sessionId, signal) => cache.resolve(query, page, sessionId, signal),
       }),
-    }, GhIssuePickerButton))
+    }, GhPickerButton))
     return dispose
   }, 'dsh-github-picker: composer input slot')
 
@@ -129,7 +129,7 @@ export function apply(ctx: ClientContext): void {
     locale: NS,
     inject: (): SettingsSectionInjected => ({
       hooks: { settings: settingsSnapshot },
-      update: (update: GhIssueSettingsUpdate) => ghScope.set(update.field, update.value),
+      update: (update: GhPickerSettingsUpdate) => ghScope.set(update.field, update.value),
       getGhAuthStatus: async () => {
         if (remote === undefined) throw new Error('dsh-github-picker: the githubPicker Remote is not mounted')
         const result = await remote.getGhAuthStatus()
@@ -137,7 +137,7 @@ export function apply(ctx: ClientContext): void {
         return result.value
       },
     }),
-  }, GhIssueSection))
+  }, GhPickerSection))
 
   // Reconnect may have rebuilt the host: the cache dies with it.
   ctx.on('connection/reset', () => {

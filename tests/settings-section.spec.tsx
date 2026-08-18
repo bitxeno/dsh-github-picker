@@ -5,8 +5,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import { createRoot, type Root } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
-import { GhIssueSection, type SettingsSectionProps } from '../src/client/SettingsSection.tsx'
-import type { GhAuthStatus, GhIssueSettings, GhIssueSettingsUpdate } from '../src/contract.ts'
+import { GhPickerSection, type SettingsSectionProps } from '../src/client/SettingsSection.tsx'
+import type { GhAuthStatus, GhPickerSettings, GhPickerSettingsUpdate } from '../src/contract.ts'
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -16,11 +16,11 @@ const t = (key: string, params?: Record<string, string>): string => params?.mess
 
 /** The card harness: live settings holder + update/getGhAuthStatus spies. */
 function harness(over: Partial<Record<string, unknown>> = {}) {
-  const settings: GhIssueSettings = { insertFormat: 'ref' }
-  const update = vi.fn<(_: GhIssueSettingsUpdate) => Promise<void>>().mockResolvedValue(undefined)
+  const settings: GhPickerSettings = { insertFormat: 'ref' }
+  const update = vi.fn<(_: GhPickerSettingsUpdate) => Promise<void>>().mockResolvedValue(undefined)
   const getGhAuthStatus = vi.fn<(params?: unknown) => Promise<GhAuthStatus>>().mockResolvedValue({ accounts: [] })
   const props = {
-    useSettings: (selector: (snapshot: GhIssueSettings) => unknown) => selector(settings),
+    useSettings: (selector: (snapshot: GhPickerSettings) => unknown) => selector(settings),
     update,
     getGhAuthStatus,
     t,
@@ -44,7 +44,7 @@ afterEach(() => {
 })
 
 async function render(props: SettingsSectionProps): Promise<void> {
-  await act(async () => { root.render(<GhIssueSection {...props} />) })
+  await act(async () => { root.render(<GhPickerSection {...props} />) })
 }
 
 const header = (): HTMLButtonElement => {

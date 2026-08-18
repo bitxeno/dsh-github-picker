@@ -26,7 +26,7 @@ export interface GhDeps {
     readonly ghCommand: GhCommand;
 }
 /** Gh-issue workspace service: search the agent's repository for the composer picker. */
-export declare class GhIssueRuntime extends TypertRemoteService {
+export declare class GhPickerRuntime extends TypertRemoteService {
     private readonly config;
     private readonly gh;
     private readonly ghCommand;

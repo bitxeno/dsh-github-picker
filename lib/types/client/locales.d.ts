@@ -41,7 +41,7 @@ export declare const zh: {
     'settings.authStatus.error': string;
 };
 /** The `github-picker` namespace key union. */
-export type GhIssueKey = keyof typeof zh;
+export type GhPickerKey = keyof typeof zh;
 /** English dictionary, checked complete against the zh key set. */
 export declare const en: {
     nav: string;
@@ -89,6 +89,6 @@ export declare function fmt(template: string, params?: Record<string, string>): 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
     interface LocaleNamespaceMap {
         /** The composer picker and settings copy. */
-        [NS]: GhIssueKey;
+        [NS]: GhPickerKey;
     }
 }

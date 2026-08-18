@@ -10,13 +10,13 @@
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { settingsNamespace, type SettingsScope } from '@deepseek-ai/dsh-settings'
-import type { GhIssueSettings } from './contract.ts'
+import type { GhPickerSettings } from './contract.ts'
 
 /** The branded namespace name (the Web allowlist must list the same string). */
-export const GH_ISSUE_NAMESPACE = settingsNamespace('github-picker')
+export const GH_PICKER_NAMESPACE = settingsNamespace('github-picker')
 
 /** Schemastery schema of the `github-picker` namespace section. */
-export const GhIssueSettingsSchema: z<GhIssueSettings> = z.object({
+export const GhPickerSettingsSchema: z<GhPickerSettings> = z.object({
   insertFormat: z.union(['url', 'ref'] as const).default('ref'),
 })
 
@@ -25,6 +25,6 @@ export const GhIssueSettingsSchema: z<GhIssueSettings> = z.object({
  * @param ctx - the plugin context carrying the settings provider.
  * @returns the owner scope backing the runtime's live reads.
  */
-export function registerGhIssueSettings(ctx: Context): SettingsScope<GhIssueSettings> {
-  return ctx.settings.register(GH_ISSUE_NAMESPACE, GhIssueSettingsSchema, { applies: 'live' })
+export function registerGhPickerSettings(ctx: Context): SettingsScope<GhPickerSettings> {
+  return ctx.settings.register(GH_PICKER_NAMESPACE, GhPickerSettingsSchema, { applies: 'live' })
 }

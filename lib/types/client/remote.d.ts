@@ -8,7 +8,7 @@ import type { RemoteResult, TypertRemoteContribution } from '@deepseek-ai/dsh-ty
 import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client';
 import type { GhAuthStatus, GitHubSearchResult } from '../contract.ts';
 /** The githubPicker Remote namespace's client contribution. */
-export declare const GH_ISSUE_REMOTE: TypertRemoteContribution;
+export declare const GH_PICKER_REMOTE: TypertRemoteContribution;
 declare module '@deepseek-ai/dsh-typert-protocol' {
     /** The `githubPicker` namespace face mounted under `ctx.remote.githubPicker`. */
     interface TypertRemoteNamespace$6769746875625069636b6572 {

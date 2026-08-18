@@ -41,12 +41,12 @@ export interface GitHubSearchResult {
     readonly truncated: boolean;
 }
 /** The `github-picker` settings namespace's durable shape (host and client share it). */
-export interface GhIssueSettings {
+export interface GhPickerSettings {
     /** Inserted reference format: the @owner/repo#number form (default) or the plain GitHub URL. */
     readonly insertFormat: 'url' | 'ref';
 }
 /** One field update sent through the plugin-owned settings scope. */
-export type GhIssueSettingsUpdate = {
+export type GhPickerSettingsUpdate = {
     readonly field: 'insertFormat';
     readonly value: 'url' | 'ref';
 };
@@ -135,4 +135,4 @@ export declare const ghAuthStatusSchema: z.ZodReadonly<z.ZodObject<{
     }>>;
 }, z.core.$strip>>;
 /** The githubPicker Remote namespace's strict invocation descriptors. */
-export declare const GH_ISSUE_INVOCATIONS: readonly InvocationDescriptor[];
+export declare const GH_PICKER_INVOCATIONS: readonly InvocationDescriptor[];

@@ -10,14 +10,14 @@
 import type { Context } from '@deepseek-ai/cordis';
 import z from '@deepseek-ai/schemastery';
 import { type SettingsScope } from '@deepseek-ai/dsh-settings';
-import type { GhIssueSettings } from './contract.ts';
+import type { GhPickerSettings } from './contract.ts';
 /** The branded namespace name (the Web allowlist must list the same string). */
-export declare const GH_ISSUE_NAMESPACE: import("@deepseek-ai/dsh-settings").SettingsNamespace;
+export declare const GH_PICKER_NAMESPACE: import("@deepseek-ai/dsh-settings").SettingsNamespace;
 /** Schemastery schema of the `github-picker` namespace section. */
-export declare const GhIssueSettingsSchema: z<GhIssueSettings>;
+export declare const GhPickerSettingsSchema: z<GhPickerSettings>;
 /**
  * Register the namespace with the settings provider and return its owner scope.
  * @param ctx - the plugin context carrying the settings provider.
  * @returns the owner scope backing the runtime's live reads.
  */
-export declare function registerGhIssueSettings(ctx: Context): SettingsScope<GhIssueSettings>;
+export declare function registerGhPickerSettings(ctx: Context): SettingsScope<GhPickerSettings>;

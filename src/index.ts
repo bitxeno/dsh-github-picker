@@ -17,9 +17,9 @@ import type {} from '@deepseek-ai/dsh-typert-registry'
 // Type-only: brings the `ctx.settings` and `ctx.agents` Context merges in.
 import type {} from '@deepseek-ai/dsh-settings'
 import type {} from '@deepseek-ai/dsh-agent'
-import { GhIssueRuntime } from './runtime.ts'
+import { GhPickerRuntime } from './runtime.ts'
 import { TYPERT_MANIFEST } from './typert.ts'
-import { registerGhIssueSettings } from './settings.ts'
+import { registerGhPickerSettings } from './settings.ts'
 import { GhProvider, ghCommand } from './providers/gh.ts'
 import { mentionPreStep, type MentionRepoResolver } from './mention.ts'
 import { PICKER_PAGE_SIZE } from './contract.ts'
@@ -56,9 +56,9 @@ export function apply(ctx: Context, config?: Config): void {
   // The durable settings namespace: the official plugin-configuration card in
   // the browser binds it through `settingsScope` — the runtime needs no read
   // or write seam for the insert format.
-  registerGhIssueSettings(ctx)
+  registerGhPickerSettings(ctx)
   const gh = new GhProvider({ perPage: PICKER_PAGE_SIZE, timeoutMs: resolved.searchTimeoutMs })
-  const runtime = new GhIssueRuntime(
+  const runtime = new GhPickerRuntime(
     ctx,
     resolved,
     gh,

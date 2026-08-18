@@ -43,7 +43,7 @@ export const zh = {
 } satisfies Record<string, string>
 
 /** The `github-picker` namespace key union. */
-export type GhIssueKey = keyof typeof zh
+export type GhPickerKey = keyof typeof zh
 
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
@@ -79,7 +79,7 @@ export const en = {
   'settings.authStatus.none': 'No gh account detected (run gh auth login).',
   'settings.authStatus.failed': 'Could not read the gh login status.',
   'settings.authStatus.error': '{message}',
-} satisfies Record<GhIssueKey, string>
+} satisfies Record<GhPickerKey, string>
 
 /** Locale namespace id registered under ctx.locale. */
 export const NS = 'github-picker'
@@ -98,6 +98,6 @@ export function fmt(template: string, params?: Record<string, string>): string {
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     /** The composer picker and settings copy. */
-    [NS]: GhIssueKey
+    [NS]: GhPickerKey
   }
 }

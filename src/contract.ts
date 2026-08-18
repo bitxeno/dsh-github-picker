@@ -46,13 +46,13 @@ export interface GitHubSearchResult {
 }
 
 /** The `github-picker` settings namespace's durable shape (host and client share it). */
-export interface GhIssueSettings {
+export interface GhPickerSettings {
   /** Inserted reference format: the @owner/repo#number form (default) or the plain GitHub URL. */
   readonly insertFormat: 'url' | 'ref'
 }
 
 /** One field update sent through the plugin-owned settings scope. */
-export type GhIssueSettingsUpdate =
+export type GhPickerSettingsUpdate =
   | { readonly field: 'insertFormat'; readonly value: 'url' | 'ref' }
 
 /** One logged-in gh account (connection facts only; tokens never cross the wire). */
@@ -115,7 +115,7 @@ export const ghAuthStatusSchema = z.object({
 }).readonly()
 
 /** The githubPicker Remote namespace's strict invocation descriptors. */
-export const GH_ISSUE_INVOCATIONS: readonly InvocationDescriptor[] = [
+export const GH_PICKER_INVOCATIONS: readonly InvocationDescriptor[] = [
   {
     id: 'dsh-github-picker#githubPicker/search',
     service: 'githubPicker',

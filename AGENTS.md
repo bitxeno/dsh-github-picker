@@ -11,7 +11,7 @@ level).
 
 ```
 src/index.ts        host entry: function plugin (name/inject/Config/apply, no default export)
-src/runtime.ts      GhIssueRuntime (TypertRemoteService, @Remote search/getGhAuthStatus) —
+src/runtime.ts      GhPickerRuntime (TypertRemoteService, @Remote search/getGhAuthStatus) —
                     wire namespace `githubPicker`
 src/mention.ts      Host pre-step scanner: URLs, @owner/repo#number, and bare #number
                     → <github-reference> markers (source `github-picker-mention`)
@@ -29,7 +29,7 @@ src/client/         browser half, served as the single file /plugins/dsh-github-
                     slot registration (hooks/settings via the bound settings scope), locale,
                     styles, and the settings.plugin.item card registration (keyed)
   picker.tsx        the composer control for `conversation.input.right` (list slot, id
-                    'gh-issue-picker', order 100): a GitHub-mark button whose popup is a
+                    'gh-picker', order 100): a GitHub-mark button whose popup is a
                     plain sibling (absolute, bottom: calc(100% + 8px), right: 0). Opens a
                     searchable list from the host search (12 per page; scrolling to the
                     bottom fetches the next page), filters locally via search.ts,

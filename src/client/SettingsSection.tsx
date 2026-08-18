@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
-import type { GhAuthStatus, GhIssueSettings, GhIssueSettingsUpdate } from '../contract.ts'
+import type { GhAuthStatus, GhPickerSettings, GhPickerSettingsUpdate } from '../contract.ts'
 import { ChevronDown14, GitHubMarkIcon } from './icons.tsx'
 import type { NS } from './locales.ts'
 
@@ -23,9 +23,9 @@ import type { NS } from './locales.ts'
  */
 export interface SettingsSectionInjected {
   hooks: {
-    settings: ObservableSnapshot<GhIssueSettings>
+    settings: ObservableSnapshot<GhPickerSettings>
   }
-  update(update: GhIssueSettingsUpdate): Promise<void>
+  update(update: GhPickerSettingsUpdate): Promise<void>
   getGhAuthStatus(): Promise<GhAuthStatus>
 }
 
@@ -39,7 +39,7 @@ type AuthCardState =
   | { readonly phase: 'error'; readonly message: string }
 
 /** The plugin-configuration card component (official PluginCard structure). */
-export function GhIssueSection({ useSettings, update, getGhAuthStatus, t }: SettingsSectionProps) {
+export function GhPickerSection({ useSettings, update, getGhAuthStatus, t }: SettingsSectionProps) {
   // The `hooks.settings` ObservableSnapshot arrives as the bound useSettings
   // selector hook (the slot system's reserved-hooks binding).
   const settings = useSettings(snapshot => snapshot)
@@ -62,7 +62,7 @@ export function GhIssueSection({ useSettings, update, getGhAuthStatus, t }: Sett
     return () => { alive = false }
   }, [getGhAuthStatus, t])
 
-  const setField = (next: GhIssueSettingsUpdate): void => {
+  const setField = (next: GhPickerSettingsUpdate): void => {
     setSaving(true)
     void update(next).finally(() => { setSaving(false) })
   }

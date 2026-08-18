@@ -3,8 +3,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import { createRoot, type Root } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
-import { ERROR_HINT_KEY, GhIssuePickerButton, pickText, type PickerProps } from '../src/client/picker.tsx'
-import type { GhIssueSettings, GitHubRepoRef, GitHubSearchResult } from '../src/contract.ts'
+import { ERROR_HINT_KEY, GhPickerButton, pickText, type PickerProps } from '../src/client/picker.tsx'
+import type { GhPickerSettings, GitHubRepoRef, GitHubSearchResult } from '../src/contract.ts'
 import { RESULT_TTL_MS } from '../src/client/cache.ts'
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -31,7 +31,7 @@ const t = (key: string): string => key
 
 /** The component harness: live settings holder + search/setDraft spies. */
 function harness(over: Partial<Record<string, unknown>> = {}) {
-  const settings: GhIssueSettings = { insertFormat: 'ref' }
+  const settings: GhPickerSettings = { insertFormat: 'ref' }
   const search = vi.fn()
   const setDraft = vi.fn()
   const props = {
@@ -44,7 +44,7 @@ function harness(over: Partial<Record<string, unknown>> = {}) {
     useProjection: () => undefined,
     useInput: (selector: (state: { draft: string }) => unknown) => selector({ draft: 'fallback draft' }),
     inputActions: { setDraft },
-    useSettings: (selector: (snapshot: GhIssueSettings) => unknown) => selector(settings),
+    useSettings: (selector: (snapshot: GhPickerSettings) => unknown) => selector(settings),
     search,
     t,
     ...over,
@@ -67,7 +67,7 @@ afterEach(() => {
 })
 
 async function render(props: PickerProps): Promise<void> {
-  await act(async () => { root.render(<GhIssuePickerButton {...props} />) })
+  await act(async () => { root.render(<GhPickerButton {...props} />) })
 }
 
 const openButton = (): HTMLButtonElement => {
@@ -363,7 +363,7 @@ describe('searching and picking', () => {
   it('picks the URL format when configured', async () => {
     const { props, search, setDraft } = harness()
     search.mockResolvedValue(result([entry(7, { kind: 'pr', url: 'https://github.com/bitxeno/atvloadly/pull/7' })]))
-    await render({ ...props, useSettings: (selector: (s: GhIssueSettings) => unknown) => selector({ insertFormat: 'url' }) })
+    await render({ ...props, useSettings: (selector: (s: GhPickerSettings) => unknown) => selector({ insertFormat: 'url' }) })
     await act(async () => { openButton().click() })
     await act(async () => { rowButtons()[0]?.click() })
     expect(setDraft).toHaveBeenCalledWith('hello https://github.com/bitxeno/atvloadly/pull/7 ')

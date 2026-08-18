@@ -9,7 +9,7 @@
  * bundle can hold separate copies of the decorator module state.
  */
 import type { TypertContribution } from '@deepseek-ai/dsh-typert-registry/types'
-import { GH_ISSUE_INVOCATIONS } from './contract.ts'
+import { GH_PICKER_INVOCATIONS } from './contract.ts'
 
 /** The githubPicker namespace's host manifest (strict codecs shared with the client). */
 export const TYPERT_MANIFEST: TypertContribution = {
@@ -20,7 +20,7 @@ export const TYPERT_MANIFEST: TypertContribution = {
     services: [
       {
         key: 'githubPicker',
-        exportName: 'GhIssueRuntime',
+        exportName: 'GhPickerRuntime',
         description: 'GitHub issue/PR search (gh CLI) and gh account status for the composer picker.',
         tags: [],
         members: [
@@ -41,5 +41,5 @@ export const TYPERT_MANIFEST: TypertContribution = {
     events: [],
     objects: [],
   },
-  invocations: GH_ISSUE_INVOCATIONS,
+  invocations: GH_PICKER_INVOCATIONS,
 }

@@ -1,4 +1,4 @@
-/** Wire codec round-trips for the ghIssue contract. */
+/** Wire codec round-trips for the ghPicker contract. */
 import { describe, expect, it } from 'vitest'
 import {
   ghAuthAccountSchema,
@@ -7,9 +7,9 @@ import {
   gitHubRepoRefSchema,
   gitHubSearchResultSchema,
 } from '../src/contract.ts'
-import { GH_ISSUE_NAMESPACE, GhIssueSettingsSchema } from '../src/settings.ts'
+import { GH_PICKER_NAMESPACE, GhPickerSettingsSchema } from '../src/settings.ts'
 
-describe('ghIssue wire codecs', () => {
+describe('ghPicker wire codecs', () => {
   it('round-trips one issue entry', () => {
     const value = { number: 123, title: 'Fix the thing', kind: 'issue', state: 'open', url: 'https://github.com/o/r/issues/123' }
     expect(gitHubEntrySchema.parse(value)).toEqual(value)
@@ -47,11 +47,11 @@ describe('ghIssue wire codecs', () => {
     // The settings reach the browser through the official settings scope
     // (namespace-schema resolved), so the namespace identity and its
     // Schemastery schema are the whole settings contract.
-    expect(GH_ISSUE_NAMESPACE).toBe('github-picker')
+    expect(GH_PICKER_NAMESPACE).toBe('github-picker')
     // The insert-format default stands when the section comes back empty.
-    expect(GhIssueSettingsSchema.type).toBe('object')
-    expect(Object.keys(GhIssueSettingsSchema.dict)).toEqual(['insertFormat'])
-    const insertFormat = GhIssueSettingsSchema.dict.insertFormat
+    expect(GhPickerSettingsSchema.type).toBe('object')
+    expect(Object.keys(GhPickerSettingsSchema.dict)).toEqual(['insertFormat'])
+    const insertFormat = GhPickerSettingsSchema.dict.insertFormat
     expect(insertFormat.type).toBe('union')
     expect(insertFormat.toString()).toBe('"url" | "ref"')
     expect(insertFormat.meta.default).toBe('ref')

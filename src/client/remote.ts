@@ -6,16 +6,16 @@
  */
 import type { RemoteResult, TypertRemoteContribution } from '@deepseek-ai/dsh-typert-protocol'
 import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
-import { GH_ISSUE_INVOCATIONS } from '../contract.ts'
+import { GH_PICKER_INVOCATIONS } from '../contract.ts'
 import type {
   GhAuthStatus,
   GitHubSearchResult,
 } from '../contract.ts'
 
 /** The githubPicker Remote namespace's client contribution. */
-export const GH_ISSUE_REMOTE: TypertRemoteContribution = {
+export const GH_PICKER_REMOTE: TypertRemoteContribution = {
   package: 'dsh-github-picker',
-  descriptors: GH_ISSUE_INVOCATIONS,
+  descriptors: GH_PICKER_INVOCATIONS,
 }
 
 declare module '@deepseek-ai/dsh-typert-protocol' {
