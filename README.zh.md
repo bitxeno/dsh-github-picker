@@ -14,12 +14,14 @@ DeepSeek Harness Web GUI 的 GitHub Issue 与 Pull Request 引用插件。点击
 ## 安装与更新
 
 ```sh
-dsh plugin --profile web add https://github.com/bitxeno/dsh-github-picker/archive/refs/heads/main.tar.gz
+dsh plugin --profile web add dsh-github-picker
 ```
 
-已有安装也使用这条命令更新——它始终安装 `main` 分支的最新提交，URL 无需随版本改动。安装完成后重启 `dsh web`，确保 Host 和浏览器客户端加载新版本。
+已有安装也使用这条命令更新——它始终安装最新发布的版本，无需手动跟踪版本号。安装完成后重启 `dsh web`，确保 Host 和浏览器客户端加载新版本。
 
-如需锁定某个发布版本，把 `refs/heads/main` 换成对应 tag，例如 `refs/tags/v0.1.0`。
+如需锁定某个发布版本，在包名后追加版本号，例如 `dsh plugin --profile web add dsh-github-picker@0.3.0`。
+
+npm 包直接携带已提交的 `lib/` 产物（见 `package.json` 的 `files` 字段），安装过程无需构建。
 
 ## 用法
 

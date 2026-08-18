@@ -14,12 +14,14 @@ GitHub issue and pull request references for the DeepSeek Harness web GUI. Click
 ## Install or Update
 
 ```sh
-dsh plugin --profile web add https://github.com/bitxeno/dsh-github-picker/archive/refs/heads/main.tar.gz
+dsh plugin --profile web add dsh-github-picker
 ```
 
-Use the same command to update an existing installation — it always installs the latest commit on `main`, so the URL never needs a version bump. Restart `dsh web` after installation so the Host and browser client load the new version.
+Use the same command to update an existing installation — it installs the latest published version, so no version tracking is needed. Restart `dsh web` after installation so the Host and browser client load the new version.
 
-To pin a specific release instead, swap `refs/heads/main` for the tag ref, e.g. `refs/tags/v0.1.0`.
+To pin a specific release, append the version, e.g. `dsh plugin --profile web add dsh-github-picker@0.3.0`.
+
+The npm package ships the committed `lib/` bundles (see `files` in `package.json`); no build happens on install.
 
 ## Usage
 
