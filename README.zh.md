@@ -1,5 +1,9 @@
 # dsh-github-picker
 
+<div align="center">
+[English](README.md) | 简体中文
+</div>
+
 DeepSeek Harness Web GUI 的 GitHub Issue 与 Pull Request 引用插件。点击输入框右下角的 GitHub 图标，即可打开当前工作区仓库 Issue 与 PR 的搜索列表，并插入引用文本——GitHub URL，或 `@owner/repo#编号` 提及。
 
 ![dsh-github-picker 在 DeepSeek Harness Web GUI 中的效果](docs/image/preview.jpeg)
