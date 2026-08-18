@@ -17,5 +17,5 @@ export interface SettingsSectionInjected {
 }
 /** Full card props: runtime share + injected face + locale seat. */
 export type SettingsSectionProps = PropsRuntime<'settings.plugin.item'> & InjectFace<SettingsSectionInjected> & PropsLocale<typeof NS>;
-/** The settings section component. */
+/** The plugin-configuration card component (official PluginCard structure). */
 export declare function GhIssueSection({ useSettings, update, getGhAuthStatus, t }: SettingsSectionProps): import("react").JSX.Element;

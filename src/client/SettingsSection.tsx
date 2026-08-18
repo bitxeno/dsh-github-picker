@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
 import type { GhAuthStatus, GhIssueSettings, GhIssueSettingsUpdate } from '../contract.ts'
-import { GitHubMarkIcon } from './icons.tsx'
+import { ChevronDown14, GitHubMarkIcon } from './icons.tsx'
 import type { NS } from './locales.ts'
 
 /**
@@ -38,11 +38,12 @@ type AuthCardState =
   | { readonly phase: 'ready' }
   | { readonly phase: 'error'; readonly message: string }
 
-/** The settings section component. */
+/** The plugin-configuration card component (official PluginCard structure). */
 export function GhIssueSection({ useSettings, update, getGhAuthStatus, t }: SettingsSectionProps) {
   // The `hooks.settings` ObservableSnapshot arrives as the bound useSettings
   // selector hook (the slot system's reserved-hooks binding).
   const settings = useSettings(snapshot => snapshot)
+  const [open, setOpen] = useState(false)
   const [auth, setAuth] = useState<AuthCardState>({ phase: 'loading' })
   const [saving, setSaving] = useState(false)
 
@@ -70,43 +71,62 @@ export function GhIssueSection({ useSettings, update, getGhAuthStatus, t }: Sett
   const statusPillClass = auth.phase === 'error'
     ? 'dsh_atGh_statusPill dsh_atGh_statusPill_off'
     : 'dsh_atGh_statusPill dsh_atGh_statusPill_on'
+  const title = t('settings.title')
 
   return (
-    <section className="dsh_atGh_section" aria-labelledby="dsh-github-picker-settings-title">
-      <h2 id="dsh-github-picker-settings-title" className="dsh_atGh_title">{t('settings.title')}</h2>
-      {/* The GitHub-branded connection card (github ↔ gh CLI ↔ Connected). */}
-      <div className="dsh_atGh_connCard">
-        <span className="dsh_atGh_connMark"><GitHubMarkIcon /></span>
-        <span className="dsh_atGh_connBody">
-          <span className="dsh_atGh_connTitle">{t('settings.authStatus.title')}</span>
-          <span className="dsh_atGh_connVia">
-            {t('settings.authStatus.via')}
-            <code className="dsh_atGh_connCli">{t('settings.authStatus.cli')}</code>
-            {t('settings.authStatus.period')}
-          </span>
+    <section className={open ? 'dsh_atGh_card dsh_atGh_cardOpen' : 'dsh_atGh_card'}>
+      {/* The disclosure header, mirroring the official PluginCard: a button
+          that stacks the plugin title over one description line and chevron. */}
+      <button
+        type="button"
+        className="dsh_atGh_cardHeader"
+        aria-expanded={open}
+        aria-label={`${t(open ? 'settings.collapse' : 'settings.expand')}: ${title}`}
+        onClick={() => { setOpen(!open) }}
+      >
+        <span className="dsh_atGh_cardHeadText">
+          <span className="dsh_atGh_cardName">{title}</span>
+          <span className="dsh_atGh_cardDescription">{t('settings.description')}</span>
         </span>
-        {auth.phase === 'loading'
-          ? <span className="dsh_atGh_connLoading">{t('settings.authStatus.loading')}</span>
-          : (
-            <span className={statusPillClass}>
-              {connected ? t('settings.authStatus.connected') : t('settings.authStatus.notConnected')}
+        <ChevronDown14 className={open ? 'dsh_atGh_cardChevron dsh_atGh_cardChevronOpen' : 'dsh_atGh_cardChevron'} />
+      </button>
+      {open && (
+        <div className="dsh_atGh_cardBody">
+          {/* The GitHub-branded connection card (github ↔ gh CLI ↔ Connected). */}
+          <div className="dsh_atGh_connCard">
+            <span className="dsh_atGh_connMark"><GitHubMarkIcon /></span>
+            <span className="dsh_atGh_connBody">
+              <span className="dsh_atGh_connTitle">{t('settings.authStatus.title')}</span>
+              <span className="dsh_atGh_connVia">
+                {t('settings.authStatus.via')}
+                <code className="dsh_atGh_connCli">{t('settings.authStatus.cli')}</code>
+                {t('settings.authStatus.period')}
+              </span>
             </span>
-          )}
-      </div>
-      {auth.phase === 'error' && <span className="dsh_atGh_connError">{t('settings.authStatus.error', { message: auth.message })}</span>}
-      <div className="dsh_atGh_field">
-        <span>{t('settings.insertFormat')}</span>
-        <select
-          className="dsh_atGh_select"
-          value={settings.insertFormat}
-          disabled={saving}
-          onChange={event => { void setField({ field: 'insertFormat', value: event.target.value as 'url' | 'ref' }) }}
-        >
-          <option value="ref">{t('settings.insertFormat.ref')}</option>
-          <option value="url">{t('settings.insertFormat.url')}</option>
-        </select>
-        <span>{t('settings.insertFormatDesc')}</span>
-      </div>
+            {auth.phase === 'loading'
+              ? <span className="dsh_atGh_connLoading">{t('settings.authStatus.loading')}</span>
+              : (
+                <span className={statusPillClass}>
+                  {connected ? t('settings.authStatus.connected') : t('settings.authStatus.notConnected')}
+                </span>
+              )}
+          </div>
+          {auth.phase === 'error' && <span className="dsh_atGh_connError">{t('settings.authStatus.error', { message: auth.message })}</span>}
+          <div className="dsh_atGh_field">
+            <span>{t('settings.insertFormat')}</span>
+            <select
+              className="dsh_atGh_select"
+              value={settings.insertFormat}
+              disabled={saving}
+              onChange={event => { void setField({ field: 'insertFormat', value: event.target.value as 'url' | 'ref' }) }}
+            >
+              <option value="ref">{t('settings.insertFormat.ref')}</option>
+              <option value="url">{t('settings.insertFormat.url')}</option>
+            </select>
+            <span>{t('settings.insertFormatDesc')}</span>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

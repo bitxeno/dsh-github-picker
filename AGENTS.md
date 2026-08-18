@@ -36,8 +36,10 @@ src/client/         browser half, served as the single file /plugins/dsh-github-
                     inserts via inputActions.setDraft, failure hint row (localized, unpickable)
   SettingsSection.tsx  the settings.plugin.item card (keyed 'github-picker'): the gh
                     connection card (via gh CLI) + the insert-format select, reading and
-                    writing the namespace through the bound settings scope. No enable
-                    switch, no result limit — the popup scrolls through every page.
+                    writing the namespace through the bound settings scope. The card
+                    mirrors the official PluginCard — a disclosure header (title +
+                    description + chevron, collapsed by default) over the controls. No
+                    enable switch, no result limit — the popup scrolls through every page.
   styles.ts         settings-section stylesheet (`--dsw-alias-*` tokens, `dsh_atGh` prefix);
                     the picker popup styles are inline in picker.tsx
   remote.ts         the shared-descriptors client contribution for ctx.remote.$mount
@@ -45,9 +47,11 @@ src/client/         browser half, served as the single file /plugins/dsh-github-
                     classifySearchError (wire failure → hint kind, message-based)
   cache.ts          per-session result cache (TTL, shared in-flight, superseded-signal yield)
   icons.tsx         GitHub octicon set: issue open/closed, PR open/draft/closed/merged,
-                    alert (hint row), and the GitHub mark (connection card + the composer button)
+                    alert (hint row), the GitHub mark (connection card + the composer
+                    button), and the 14px disclosure chevron of the official plugin cards
   locales.ts        zh (product copy) / en dictionaries, NS = 'github-picker'. Picker error copy
-                    (`picker.error.*`) + settings copy (title 'GitHub 引用', insert format,
+                    (`picker.error.*`) + settings copy (title 'GitHub 引用', the card
+                    description, expand/collapse, insert format,
                     auth status) — no enable-switch keys.
 tests/              node-env specs (11 files); jsdom pragma where a browser API is needed
 ```

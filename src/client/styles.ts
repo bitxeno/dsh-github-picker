@@ -13,18 +13,76 @@ export const STYLE_ID = 'dsh-github-picker-style'
 
 /** The injected stylesheet text. */
 export const cssText = `
-.dsh_atGh_section {
+/* The plugin card, matching the official settings.plugin.item PluginCard
+   (dsh-client-ui-settings-plugins): a bordered card whose header is a
+   disclosure button; the open card deepens its background and rotates the
+   chevron, and the body is inset with a top divider. */
+.dsh_atGh_card {
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-3);
+  border-radius: 12px;
+  list-style: none;
+  transition: border-color 0.16s, background 0.16s;
+}
+.dsh_atGh_card:hover {
+  border-color: var(--dsw-alias-label-dimmed);
+}
+.dsh_atGh_cardOpen {
+  background: var(--dsw-alias-bg-layer-2);
+  border-color: var(--dsw-alias-label-dimmed);
+}
+.dsh_atGh_cardHeader {
+  appearance: none;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: 0 0;
+  border: 0;
+  border-radius: 12px;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  display: flex;
+}
+.dsh_atGh_cardHeader:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: -2px;
+}
+.dsh_atGh_cardHeadText {
+  flex-direction: column;
+  flex: 1;
+  gap: 4px;
+  min-width: 0;
+  display: flex;
+}
+.dsh_atGh_cardName {
+  color: var(--dsw-alias-label-primary);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.dsh_atGh_cardDescription {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.dsh_atGh_cardChevron {
+  color: var(--dsw-alias-label-tertiary);
+  flex: none;
+  transition: transform 0.16s;
+}
+.dsh_atGh_cardChevronOpen {
+  transform: rotate(180deg);
+}
+.dsh_atGh_cardBody {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-width: 0;
-}
-.dsh_atGh_title {
-  margin: 0;
-  color: var(--dsw-alias-label-primary);
-  font-size: 18px;
-  line-height: 26px;
-  font-weight: 600;
+  border-top: 1px solid var(--dsw-alias-border-l2);
+  margin: 0 16px;
+  padding: 12px 0 8px;
 }
 .dsh_atGh_field {
   display: flex;

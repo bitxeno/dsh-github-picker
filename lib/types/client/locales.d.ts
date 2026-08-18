@@ -21,6 +21,9 @@ export declare const zh: {
     'picker.error.repo-not-found': string;
     'picker.error.unknown': string;
     'settings.title': string;
+    'settings.description': string;
+    'settings.expand': string;
+    'settings.collapse': string;
     'settings.subtitle': string;
     'settings.insertFormat': string;
     'settings.insertFormat.url': string;
@@ -55,6 +58,9 @@ export declare const en: {
     'picker.error.repo-not-found': string;
     'picker.error.unknown': string;
     'settings.title': string;
+    'settings.description': string;
+    'settings.expand': string;
+    'settings.collapse': string;
     'settings.subtitle': string;
     'settings.insertFormat': string;
     'settings.insertFormat.url': string;
