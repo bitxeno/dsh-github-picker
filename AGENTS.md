@@ -119,6 +119,28 @@ tests/              node-env specs (11 files); jsdom pragma where a browser API 
   per request (refresh is enough); a Host/contract change needs a `dsh web`
   restart.
 
+## Release
+
+Publishing is automated but the **version bump is manual and local**:
+
+1. `pnpm run check` must be green (the check ladder below).
+2. Bump `version` in **both** `package.json` and `dsh.plugin.json`
+   (they must stay identical — the workflow fails on mismatch).
+3. Commit as `chore(release): bump version to X.Y.Z`, push `main`.
+
+The GitHub Action (`.github/workflows/release.yml`) then takes over on the
+bump push (or `workflow_dispatch`): it creates and pushes the annotated tag
+`vX.Y.Z`, creates a GitHub Release (`--generate-notes`; `--prerelease` for
+prerelease versions), and runs `npm publish` (`--tag next` for prereleases).
+It is idempotent — an existing tag skips every step, so unrelated
+`package.json` touches do not re-release. It needs the `NPM_TOKEN` repo
+secret (npm automation token); without it the tag/release still succeed and
+only the npm step fails. CI does not run tests/build: `devDependencies` are
+machine-local `link:` entries and the published artifact is the committed
+`lib/`. Release locally (no automation) when offline or for practice: bump +
+commit, `git tag -a vX.Y.Z -m "Release vX.Y.Z"`, `git push origin main
+vX.Y.Z`, `npm publish`.
+
 ## Check ladder
 
 `pnpm run check` (typecheck + tests + build) must be green before every
