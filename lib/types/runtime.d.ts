@@ -1,14 +1,14 @@
 /**
- * The dsh-github-picker host Remote service (`ctx.ghIssue`, wire namespace
- * `ghIssue`). Registered as a TypertRemoteService so the Host Gateway's
- * source-mode discovery exports its @Remote methods to the Web client under
- * `/api/ghIssue/<method>` with zero generated artifacts: `search` takes the
- * resolved live Agent (the `agent` Typert lookup) and searches its workspace
- * repository through the gh CLI only (no device flow, no stored tokens);
- * `getSettings`/`updateSettings` serve the durable settings (insert format)
- * over the plugin-owned scope; `getGhAuthStatus` reports the gh
- * account-connection status for the settings page. The Host only marks
- * validated `#number` references at `agent/pre-step`.
+ * The dsh-github-picker host Remote service (`ctx.githubPicker`, wire
+ * namespace `githubPicker`). Registered as a TypertRemoteService so the Host
+ * Gateway's source-mode discovery exports its @Remote methods to the Web
+ * client under `/api/githubPicker/<method>` with zero generated artifacts:
+ * `search` takes the resolved live Agent (the `agent` Typert lookup) and
+ * searches its workspace repository through the gh CLI only (no device flow,
+ * no stored tokens); `getSettings`/`updateSettings` serve the durable
+ * settings (insert format) over the plugin-owned scope; `getGhAuthStatus`
+ * reports the gh account-connection status for the settings page. The Host
+ * only marks validated `#number` references at `agent/pre-step`.
  */
 import type { Context } from '@deepseek-ai/cordis';
 import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
@@ -34,7 +34,7 @@ export declare class GhIssueRuntime extends TypertRemoteService {
     private readonly authTimeoutMs;
     private readonly resolver;
     /**
-     * Register the service under the `ghIssue` key (the wire namespace).
+     * Register the service under the `githubPicker` key (the wire namespace).
      * @param ctx - owning cordis context.
      * @param config - resolved plugin configuration.
      * @param readSettings - live settings read for the insert format.

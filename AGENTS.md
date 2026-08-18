@@ -12,12 +12,12 @@ level).
 ```
 src/index.ts        host entry: function plugin (name/inject/Config/apply, no default export)
 src/runtime.ts      GhIssueRuntime (TypertRemoteService, @Remote search/getSettings/
-                    updateSettings/getGhAuthStatus) — wire namespace `ghIssue`
+                    updateSettings/getGhAuthStatus) — wire namespace `githubPicker`
 src/mention.ts      Host pre-step scanner: URLs, @owner/repo#number, and bare #number
-                    → <github-reference> markers (source `gh-issue-mention`)
+                    → <github-reference> markers (source `github-picker-mention`)
 src/contract.ts     one shared descriptor set + zod codecs + entry/config types
 src/typert.ts       strict host Typert manifest, registered via ctx.typert.register
-src/settings.ts     the `gh-issue` settings namespace (insert format only; no enable
+src/settings.ts     the `github-picker` settings namespace (insert format only; no enable
                     switch — the picker is always on)
 src/gh-auth.ts      reads `gh auth status --json hosts` → the account-connection status (no token material)
 src/repo.ts         git remote URL parsing (https/ssh/git@ forms) + per-workspace TTL cache
@@ -42,7 +42,7 @@ src/client/         browser half, served as the single file /plugins/dsh-github-
   cache.ts          per-session result cache (TTL, shared in-flight, superseded-signal yield)
   icons.tsx         GitHub octicon set: issue open/closed, PR open/draft/closed/merged,
                     alert (hint row), and the GitHub mark (connection card + the composer button)
-  locales.ts        zh (product copy) / en dictionaries, NS = 'gh-issue'. Picker error copy
+  locales.ts        zh (product copy) / en dictionaries, NS = 'github-picker'. Picker error copy
                     (`picker.error.*`) + settings copy (title 'GitHub 引用', insert format,
                     auth status) — no enable-switch keys.
 tests/              node-env specs (11 files); jsdom pragma where a browser API is needed
@@ -50,8 +50,12 @@ tests/              node-env specs (11 files); jsdom pragma where a browser API 
 
 ## Contracts with the harness (do not drift)
 
-- The wire endpoints are `ghIssue/search`, `ghIssue/getSettings`,
-  `ghIssue/updateSettings`, and `ghIssue/getGhAuthStatus`. Search results,
+- The wire endpoints are `githubPicker/search`, `githubPicker/getSettings`,
+  `githubPicker/updateSettings`, and `githubPicker/getGhAuthStatus` (the
+  gateway route is `/api/githubPicker/*`). These names are distinct from the
+  sibling `dsh-at-github` plugin's `ghIssue/*` wire namespace, its `gh-issue`
+  settings/locale namespaces, and its `gh-issue-mention` reference source — the
+  two plugins may be installed side by side. Search results,
   the settings section (insert format), and the gh account-connection status
   cross the wire; no token material ever does — the plugin only reads `gh
   auth status` facts and never stores any credential.
@@ -64,18 +68,18 @@ tests/              node-env specs (11 files); jsdom pragma where a browser API 
 - The descriptor set lives in `src/contract.ts` and is shared verbatim by the
   host manifest and the client contribution; the agent lookup codec's
   `typeSymbol` must stay `@deepseek-ai/dsh-session/types#SessionId`.
-- The plugin registers the `gh-issue` namespace through `ctx.settings.register`
+- The plugin registers the `github-picker` namespace through `ctx.settings.register`
   — **no enable switch exists, the picker is always on** and the namespace
   holds only `insertFormat`. The public DSH package does not expose that
   namespace through `WEB_SETTINGS_NAMESPACES`; browser reads and writes MUST
-  use `ghIssue/getSettings` and `ghIssue/updateSettings` (the Host methods own
-  normalization and call the owner settings scope).
+  use `githubPicker/getSettings` and `githubPicker/updateSettings` (the Host
+  methods own normalization and call the owner settings scope).
 - The client composes only through the standing seams (`ctx.remote.$mount`,
   `ctx.slots.register`, `ctx.locale.register`). The mounted Remote namespace
   is resolved through
-  `ctx.reflect.get('remote.ghIssue')` — NOT the dotted `ctx.remote.ghIssue`
-  read, which walks the fiber chain and stops at the Loader's runtime-less
-  forks.
+  `ctx.reflect.get('remote.githubPicker')` — NOT the dotted
+  `ctx.remote.githubPicker` read, which walks the fiber chain and stops at the
+  Loader's runtime-less forks.
 - **The picker is a plain component in the `conversation.input.right` list
   slot** (the seat just before the send button), mounted with
   `ctx.slots.inject('conversation.input.right', () => ctx.slots.register(...))`
@@ -98,6 +102,9 @@ tests/              node-env specs (11 files); jsdom pragma where a browser API 
   URLs) is scanned by the host's `scanMentions`; the picker's inserted text
   must stay within those three forms so the pre-step always marks picks.
   Keep `src/mention.ts` and `src/client/picker.tsx` (`pickText`) in sync.
+  The pre-step skips references a sibling plugin already marked (identical
+  `<github-reference .../>` markers, via `referenceKeysOf`), so installing
+  dsh-at-github alongside does not duplicate markers.
 - The web server serves exactly one file per client plugin: keep the client
   bundle single-file; styles are the injected `styles.ts` string (no CSS
   artifacts). `lib/` is committed; the profile install
@@ -123,7 +130,7 @@ comment. Run `pnpm exec vitest run --coverage` to see the per-file table.
   (`~/.dsh/profiles/web/package.json` dependencies + `dsh.profile.bundles`),
   `pnpm install` there, restart `dsh web`, refresh the GUI. The plugin serves
   at `/plugins/dsh-github-picker/client.js` and the gateway routes
-  `/api/ghIssue/*`.
+  `/api/githubPicker/*`.
 
 ## Copy
 

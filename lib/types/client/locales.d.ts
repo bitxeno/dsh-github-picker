@@ -1,5 +1,5 @@
 /**
- * `gh-issue` locale namespace: the composer picker button and popup copy
+ * `github-picker` locale namespace: the composer picker button and popup copy
  * (search, loading, empty, the localized failure hint rows) plus the
  * settings section copy (title, insert format, the gh account-connection
  * card). Chinese is the product copy; English mirrors it. There is no enable
@@ -36,7 +36,7 @@ export declare const zh: {
     'settings.authStatus.failed': string;
     'settings.authStatus.error': string;
 };
-/** The `gh-issue` namespace key union. */
+/** The `github-picker` namespace key union. */
 export type GhIssueKey = keyof typeof zh;
 /** English dictionary, checked complete against the zh key set. */
 export declare const en: {
@@ -70,7 +70,7 @@ export declare const en: {
     'settings.authStatus.error': string;
 };
 /** Locale namespace id registered under ctx.locale. */
-export declare const NS = "gh-issue";
+export declare const NS = "github-picker";
 /**
  * Fill one dictionary template's `{name}`-style placeholders.
  * @param template - dictionary text.

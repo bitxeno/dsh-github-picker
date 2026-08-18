@@ -41,7 +41,7 @@ export interface GitHubSearchResult {
   readonly truncated: boolean
 }
 
-/** The `gh-issue` settings namespace's durable shape (host and client share it). */
+/** The `github-picker` settings namespace's durable shape (host and client share it). */
 export interface GhIssueSettings {
   /** Inserted reference format: the @owner/repo#number form (default) or the plain GitHub URL. */
   readonly insertFormat: 'url' | 'ref'
@@ -96,7 +96,7 @@ export const gitHubSearchResultSchema = z.object({
   truncated: z.boolean(),
 }).readonly()
 
-/** Wire codec: the resolved gh-issue settings section. */
+/** Wire codec: the resolved github-picker settings section. */
 export const ghIssueSettingsSchema = z.object({
   insertFormat: z.enum(['url', 'ref']),
 }).readonly()
@@ -120,12 +120,12 @@ export const ghAuthStatusSchema = z.object({
   error: z.enum(['gh-missing', 'not-authenticated', 'unknown']).optional(),
 }).readonly()
 
-/** The ghIssue Remote namespace's strict invocation descriptors. */
+/** The githubPicker Remote namespace's strict invocation descriptors. */
 export const GH_ISSUE_INVOCATIONS: readonly InvocationDescriptor[] = [
   {
-    id: 'dsh-github-picker#ghIssue/search',
-    service: 'ghIssue',
-    namespace: 'ghIssue',
+    id: 'dsh-github-picker#githubPicker/search',
+    service: 'githubPicker',
+    namespace: 'githubPicker',
     method: 'search',
     invocation: { kind: 'direct' },
     parameters: [
@@ -153,9 +153,9 @@ export const GH_ISSUE_INVOCATIONS: readonly InvocationDescriptor[] = [
     },
   },
   {
-    id: 'dsh-github-picker#ghIssue/getSettings',
-    service: 'ghIssue',
-    namespace: 'ghIssue',
+    id: 'dsh-github-picker#githubPicker/getSettings',
+    service: 'githubPicker',
+    namespace: 'githubPicker',
     method: 'getSettings',
     invocation: { kind: 'direct' },
     parameters: [],
@@ -166,9 +166,9 @@ export const GH_ISSUE_INVOCATIONS: readonly InvocationDescriptor[] = [
     },
   },
   {
-    id: 'dsh-github-picker#ghIssue/updateSettings',
-    service: 'ghIssue',
-    namespace: 'ghIssue',
+    id: 'dsh-github-picker#githubPicker/updateSettings',
+    service: 'githubPicker',
+    namespace: 'githubPicker',
     method: 'updateSettings',
     invocation: { kind: 'direct' },
     parameters: [
@@ -190,9 +190,9 @@ export const GH_ISSUE_INVOCATIONS: readonly InvocationDescriptor[] = [
     },
   },
   {
-    id: 'dsh-github-picker#ghIssue/getGhAuthStatus',
-    service: 'ghIssue',
-    namespace: 'ghIssue',
+    id: 'dsh-github-picker#githubPicker/getGhAuthStatus',
+    service: 'githubPicker',
+    namespace: 'githubPicker',
     method: 'getGhAuthStatus',
     invocation: { kind: 'direct' },
     parameters: [],

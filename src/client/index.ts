@@ -1,6 +1,6 @@
 /**
  * dsh-github-picker client plugin: the browser half of the GitHub picker.
- * Mounts the ghIssue Remote namespace, the settings section, and the composer
+ * Mounts the githubPicker Remote namespace, the settings section, and the composer
  * control — a GitHub-mark button in the input box's right tool row
  * (`conversation.input.right` list slot, the seat next to the send button).
  * Clicking it opens a searchable popup of the workspace repository's issues
@@ -29,7 +29,7 @@ import type { GhAuthStatus, GhIssueSettings, GhIssueSettingsUpdate, GitHubSearch
 /** Required services: the Remote face, the slot registry, and locale. */
 export const inject = ['remote', 'slots', 'locale']
 
-/** The mounted ghIssue namespace service's callable face. */
+/** The mounted githubPicker namespace service's callable face. */
 interface GhIssueFace {
   search(query: string, sessionId: SessionId, signal?: AbortSignal): Promise<{ ok: true; value: GitHubSearchResult } | { ok: false; error: { code: string; message: string; details: object } }>
   getSettings(): Promise<{ ok: true; value: GhIssueSettings } | { ok: false; error: { code: string; message: string; details: object } }>
@@ -66,9 +66,9 @@ export function apply(ctx: ClientContext): void {
 
   ctx.effect(async () => {
     const dispose = await ctx.remote.$mount(GH_ISSUE_REMOTE)
-    remote = (ctx.reflect as unknown as { get(name: string): unknown }).get('remote.ghIssue') as GhIssueFace | undefined
+    remote = (ctx.reflect as unknown as { get(name: string): unknown }).get('remote.githubPicker') as GhIssueFace | undefined
     if (remote === undefined) {
-      throw new Error('dsh-github-picker: the ghIssue Remote namespace did not mount')
+      throw new Error('dsh-github-picker: the githubPicker Remote namespace did not mount')
     }
     // Load the durable settings snapshot once the wire is live.
     const settingsResult = await remote.getSettings()
@@ -84,7 +84,7 @@ export function apply(ctx: ClientContext): void {
 
   // The per-session result cache (session-keyed inside HashCache).
   const cache = new HashCache(async (query, sessionId, signal) => {
-    if (remote === undefined) throw new Error('dsh-github-picker: the ghIssue Remote is not mounted')
+    if (remote === undefined) throw new Error('dsh-github-picker: the githubPicker Remote is not mounted')
     const result = await remote.search(query, sessionId, signal)
     if (!result.ok) {
       const error = new Error(result.error.message) as Error & { kind?: string }
@@ -136,14 +136,14 @@ export function apply(ctx: ClientContext): void {
     inject: (): SettingsSectionInjected => ({
       hooks: { settings: settingsSnapshot },
       update: async (update: GhIssueSettingsUpdate) => {
-        if (remote === undefined) throw new Error('dsh-github-picker: the ghIssue Remote is not mounted')
+        if (remote === undefined) throw new Error('dsh-github-picker: the githubPicker Remote is not mounted')
         const result = await remote.updateSettings(update)
         if (!result.ok) throw new Error(result.error.message)
         settings = result.value
         notifySettings()
       },
       getGhAuthStatus: async () => {
-        if (remote === undefined) throw new Error('dsh-github-picker: the ghIssue Remote is not mounted')
+        if (remote === undefined) throw new Error('dsh-github-picker: the githubPicker Remote is not mounted')
         const result = await remote.getGhAuthStatus()
         if (!result.ok) throw new Error(result.error.message)
         return result.value

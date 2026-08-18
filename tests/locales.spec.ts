@@ -10,7 +10,7 @@ describe('dictionaries', () => {
   })
 
   it('exports the stable namespace id', () => {
-    expect(NS).toBe('gh-issue')
+    expect(NS).toBe('github-picker')
   })
 })
 

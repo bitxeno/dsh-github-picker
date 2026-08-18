@@ -1,5 +1,5 @@
 /**
- * dsh-github-picker host plugin: mounts the `ghIssue` Typert Remote service
+ * dsh-github-picker host plugin: mounts the `githubPicker` Typert Remote service
  * (GitHub issue/PR search for the browser's composer picker), registers its
  * strict Typert manifest, and registers the settings namespace (insert
  * format; there is no enable switch — the picker is always on). All data
@@ -46,7 +46,7 @@ export const Config = z.object({
 })
 
 /**
- * Mount the ghIssue service and its settings namespace.
+ * Mount the githubPicker service and its settings namespace.
  * @param ctx - host cordis context.
  * @param config - validated plugin configuration (schema defaults applied).
  */
@@ -74,7 +74,7 @@ export function apply(ctx: Context, config?: Config): void {
     ghCommand,
     resolved.searchTimeoutMs,
   )
-  // Strict endpoint registration: the gateway resolves ghIssue/search from
+  // Strict endpoint registration: the gateway resolves githubPicker/search from
   // this manifest, independent of decorator marker state.
   ctx.effect(() => {
     const dispose = ctx.typert.register(TYPERT_MANIFEST)

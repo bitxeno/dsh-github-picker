@@ -111,7 +111,7 @@ pnpm run check
 }
 ```
 
-然后在 profile 目录执行 `pnpm install` 并重启 `dsh web`，刷新浏览器页面即可。插件以 `/plugins/dsh-github-picker/client.js` 提供服务，网关路由 `/api/ghIssue/*`。客户端 bundle 按请求实时读取：纯客户端改动只需刷新页面；Host 契约变更需要重启 `dsh web`。
+然后在 profile 目录执行 `pnpm install` 并重启 `dsh web`，刷新浏览器页面即可。插件以 `/plugins/dsh-github-picker/client.js` 提供服务，网关路由 `/api/githubPicker/*`。客户端 bundle 按请求实时读取：纯客户端改动只需刷新页面；Host 契约变更需要重启 `dsh web`。
 
 ## 许可证
 

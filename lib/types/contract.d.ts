@@ -37,7 +37,7 @@ export interface GitHubSearchResult {
     /** True when the provider capped the result list. */
     readonly truncated: boolean;
 }
-/** The `gh-issue` settings namespace's durable shape (host and client share it). */
+/** The `github-picker` settings namespace's durable shape (host and client share it). */
 export interface GhIssueSettings {
     /** Inserted reference format: the @owner/repo#number form (default) or the plain GitHub URL. */
     readonly insertFormat: 'url' | 'ref';
@@ -110,7 +110,7 @@ export declare const gitHubSearchResultSchema: z.ZodReadonly<z.ZodObject<{
     source: z.ZodLiteral<"gh">;
     truncated: z.ZodBoolean;
 }, z.core.$strip>>;
-/** Wire codec: the resolved gh-issue settings section. */
+/** Wire codec: the resolved github-picker settings section. */
 export declare const ghIssueSettingsSchema: z.ZodReadonly<z.ZodObject<{
     insertFormat: z.ZodEnum<{
         url: "url";
@@ -146,5 +146,5 @@ export declare const ghAuthStatusSchema: z.ZodReadonly<z.ZodObject<{
         unknown: "unknown";
     }>>;
 }, z.core.$strip>>;
-/** The ghIssue Remote namespace's strict invocation descriptors. */
+/** The githubPicker Remote namespace's strict invocation descriptors. */
 export declare const GH_ISSUE_INVOCATIONS: readonly InvocationDescriptor[];

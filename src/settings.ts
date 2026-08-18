@@ -1,5 +1,5 @@
 /**
- * The `gh-issue` settings namespace: the durable insert format managed from
+ * The `github-picker` settings namespace: the durable insert format managed from
  * the Web settings page. Registered with the settings provider at plugin
  * load; the runtime reads the owner scope's live value on every call, so a
  * change takes effect without a restart. There is no enable switch — the
@@ -13,9 +13,9 @@ import { settingsNamespace, type SettingsScope } from '@deepseek-ai/dsh-settings
 import type { GhIssueSettings } from './contract.ts'
 
 /** The branded namespace name (the Web allowlist must list the same string). */
-export const GH_ISSUE_NAMESPACE = settingsNamespace('gh-issue')
+export const GH_ISSUE_NAMESPACE = settingsNamespace('github-picker')
 
-/** Schemastery schema of the `gh-issue` namespace section. */
+/** Schemastery schema of the `github-picker` namespace section. */
 export const GhIssueSettingsSchema: z<GhIssueSettings> = z.object({
   insertFormat: z.union(['url', 'ref'] as const).default('ref'),
 })

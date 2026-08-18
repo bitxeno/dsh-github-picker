@@ -1,6 +1,6 @@
 /**
  * Host composition behavior: the plugin module boots over a real cordis
- * Context, registers the ghIssue service with the Gateway-visible binding,
+ * Context, registers the githubPicker service with the Gateway-visible binding,
  * and its settings @Remotes answer over the plugin-owned settings scope.
  * Search runs through the real provider path with a stubbed gh subprocess;
  * the gh account-connection status reads through the same command seam.
@@ -58,7 +58,7 @@ async function mount(
   ctx.provide('agents', { roots: () => [] })
   const fiber = ctx.plugin({ inject: plugin.inject, apply: plugin.apply }, config)
   await fiber
-  const service = ctx.get('ghIssue') as unknown as GhIssueRuntime | undefined
+  const service = ctx.get('githubPicker') as unknown as GhIssueRuntime | undefined
   return { fiber, service }
 }
 
@@ -91,7 +91,7 @@ afterEach(() => {
 })
 
 describe('dsh-github-picker host composition', () => {
-  it('mounts the ghIssue service under the remote namespace', async () => {
+  it('mounts the githubPicker service under the remote namespace', async () => {
     const ctx = new Context()
     const { fiber, service } = await mount(ctx)
     expect(service).toBeDefined()

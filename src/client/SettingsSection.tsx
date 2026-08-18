@@ -2,7 +2,7 @@
  * The settings page section for dsh-github-picker: the insert format and the
  * gh CLI account-connection status card. Reads and writes go through the
  * plugin-owned settings snapshot and the Remote updateSettings path — the
- * public DSH package does not expose the gh-issue namespace to the browser.
+ * public DSH package does not expose the github-picker namespace to the browser.
  * There is no enable switch: the picker is always on. All dsh imports are
  * type-only.
  */

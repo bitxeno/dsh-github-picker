@@ -19,7 +19,7 @@ export interface HashMention {
 /** The source tag the injected reference carries (transcript consumers use it). */
 declare module '@deepseek-ai/dsh-llm' {
   interface MessageSourceMap {
-    'gh-issue-mention': { kind: 'gh-issue-mention'; number: number }
+    'github-picker-mention': { kind: 'github-picker-mention'; number: number }
   }
 }
 
@@ -89,6 +89,29 @@ function referenceForm(owner: string, name: string, number: number): string {
   return `<github-reference repo="${escapeAttribute(`${owner}/${name}`)}" number="${number}" />`
 }
 
+/** An already-present `<github-reference>` marker inside the step messages. */
+const REFERENCE_MARKER_PATTERN = /<github-reference\s+repo="([^"]+)"\s+number="(\d+)"\s*\/>/gu
+
+/**
+ * Collect the `escapedRepo#number` keys of the reference markers already
+ * present in the step messages. When a sibling plugin has marked the same
+ * references (identical marker text), this prevents duplicate injections.
+ * @param messages - the assembled step messages.
+ * @returns the present marker keys.
+ */
+export function referenceKeysOf(messages: readonly UserMessage[]): ReadonlySet<string> {
+  const keys = new Set<string>()
+  for (const message of messages) {
+    for (const block of message.content) {
+      if (block.type !== 'text') continue
+      for (const match of block.text.matchAll(REFERENCE_MARKER_PATTERN)) {
+        keys.add(`${match[1]}#${match[2]}`)
+      }
+    }
+  }
+  return keys
+}
+
 /**
  * Expand every GitHub reference into a marker, in first-seen order. A bare
  * `#number` token resolves against the workspace repo; URL and
@@ -96,11 +119,13 @@ function referenceForm(owner: string, name: string, number: number): string {
  * enable switch — references are always marked.
  * @param messages - the assembled step messages.
  * @param repo - the workspace repository identity (undefined = no bare-# resolution).
+ * @param existing - marker keys already present in the pipeline (deduplicated).
  * @returns the injected user messages (empty when nothing matched).
  */
 export function expandMentions(
   messages: readonly UserMessage[],
   repo: GitHubRepoRef | undefined,
+  existing?: ReadonlySet<string>,
 ): UserMessage[] {
   const mentions: Mention[] = []
   for (const message of messages) {
@@ -112,9 +137,12 @@ export function expandMentions(
   }
   const injections: UserMessage[] = []
   for (const mention of mentions) {
+    const text = referenceForm(mention.owner, mention.name, mention.number)
+    // A sibling plugin's identical marker is already in the pipeline — skip.
+    if (existing?.has(`${escapeAttribute(`${mention.owner}/${mention.name}`)}#${mention.number}`)) continue
     injections.push(createUserMessage({
-      content: [{ type: 'text', text: referenceForm(mention.owner, mention.name, mention.number) }],
-      source: { kind: 'gh-issue-mention', number: mention.number },
+      content: [{ type: 'text', text }],
+      source: { kind: 'github-picker-mention', number: mention.number },
     }))
   }
   return injections
@@ -153,7 +181,9 @@ export async function mentionPreStep(
   const cwd = agent.session.header.cwd
   if (cwd === undefined) return decision
   const repo = await resolver.resolve(cwd, '', signal)
-  const injections = expandMentions(messages, repo)
+  // Skip references a sibling plugin already marked in the downstream step.
+  const existing = referenceKeysOf(decision.messages)
+  const injections = expandMentions(messages, repo, existing)
   if (injections.length === 0) return decision
   return { kind: 'enter', messages: [...decision.messages, ...injections] }
 }

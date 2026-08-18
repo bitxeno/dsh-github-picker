@@ -1,5 +1,5 @@
 /**
- * The hand-written host Typert manifest for the ghIssue Remote. Registered
+ * The hand-written host Typert manifest for the githubPicker Remote. Registered
  * through `ctx.typert.register` in the plugin body, it claims the wire
  * endpoints through the strict registry — the same path generated `./typert`
  * artifacts use — so the Host Gateway resolves search, settings, and the gh
@@ -11,7 +11,7 @@
 import type { TypertContribution } from '@deepseek-ai/dsh-typert-registry/types'
 import { GH_ISSUE_INVOCATIONS } from './contract.ts'
 
-/** The ghIssue namespace's host manifest (strict codecs shared with the client). */
+/** The githubPicker namespace's host manifest (strict codecs shared with the client). */
 export const TYPERT_MANIFEST: TypertContribution = {
   package: 'dsh-github-picker',
   face: 'host',
@@ -19,7 +19,7 @@ export const TYPERT_MANIFEST: TypertContribution = {
   model: {
     services: [
       {
-        key: 'ghIssue',
+        key: 'githubPicker',
         exportName: 'GhIssueRuntime',
         description: 'GitHub issue/PR search (gh CLI), durable settings (insert format), and gh account status for the composer picker.',
         tags: [],

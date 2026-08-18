@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { UserMessage } from '@deepseek-ai/dsh-llm'
-import { expandMentions, mentionPreStep, scanMentions } from '../src/mention.ts'
+import { expandMentions, mentionPreStep, referenceKeysOf, scanMentions } from '../src/mention.ts'
 import type { GitHubRepoRef } from '../src/contract.ts'
 
 const repo: GitHubRepoRef = { owner: 'owner', name: 'name' }
@@ -69,7 +69,7 @@ describe('expandMentions', () => {
     const injections = expandMentions([userMessage('fix #123 and #456 and #123')], repo)
     expect(injections).toHaveLength(2)
     expect(injections[0]?.content[0]?.type).toBe('text')
-    expect(injections[0]?.source).toMatchObject({ kind: 'gh-issue-mention', number: 123 })
+    expect(injections[0]?.source).toMatchObject({ kind: 'github-picker-mention', number: 123 })
     const text = (injections[0]?.content[0] as { type: 'text'; text: string }).text
     expect(text).toBe('<github-reference repo="owner/name" number="123" />')
   })
@@ -105,6 +105,36 @@ describe('expandMentions', () => {
     const text = (injections[0]?.content[0] as { type: 'text'; text: string }).text
     expect(text).toBe('<github-reference repo="a&amp;b/c&quot;d" number="1" />')
   })
+
+  it('skips markers a sibling plugin already injected', () => {
+    const existing = new Set(['owner/name#123'])
+    const injections = expandMentions([userMessage('#123 and #7')], repo, existing)
+    expect(injections).toHaveLength(1)
+    expect(injections[0]?.source).toMatchObject({ number: 7 })
+  })
+})
+
+describe('referenceKeysOf', () => {
+  it('collects the keys of present reference markers', () => {
+    const marked = createUserMessage({
+      content: [{ type: 'text', text: '<github-reference repo="owner/name" number="125" />' }],
+      source: { kind: 'github-picker-mention', number: 125 },
+    })
+    const keys = referenceKeysOf([marked, userMessage('plain text')])
+    expect(keys).toEqual(new Set(['owner/name#125']))
+  })
+
+  it('ignores non-text blocks and unmarked text', () => {
+    const withImage = createUserMessage({
+      content: [
+        { type: 'image', src: 'data:image/png;base64,x' },
+        { type: 'text', text: '"#5 and <github-reference repo="o/r" number="9" />"' },
+      ],
+      source: { kind: 'user' },
+    }) as UserMessage
+    const keys = referenceKeysOf([withImage])
+    expect(keys).toEqual(new Set(['o/r#9']))
+  })
 })
 
 describe('mentionPreStep', () => {
@@ -124,6 +154,24 @@ describe('mentionPreStep', () => {
     if (decision.kind === 'enter') {
       expect(decision.messages).toHaveLength(2)
     }
+  })
+
+  it('skips references a sibling plugin already marked downstream', async () => {
+    const already = createUserMessage({
+      content: [{ type: 'text', text: '<github-reference repo="owner/name" number="123" />' }],
+      source: { kind: 'github-picker-mention', number: 123 },
+    })
+    const next = vi.fn(async () => ({ kind: 'enter', messages: [already] }))
+    const resolver = { resolve: vi.fn(async () => repo) }
+    const decision = await mentionPreStep(
+      { session: { header: { cwd: '/work' } } },
+      resolver,
+      [userMessage('#123')],
+      new AbortController().signal,
+      next,
+    )
+    expect(decision.kind).toBe('enter')
+    if (decision.kind === 'enter') expect(decision.messages).toHaveLength(1)
   })
 
   it('passes rejected decisions through untouched', async () => {

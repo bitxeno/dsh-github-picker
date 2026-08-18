@@ -16,8 +16,8 @@ export interface HashMention {
 /** The source tag the injected reference carries (transcript consumers use it). */
 declare module '@deepseek-ai/dsh-llm' {
     interface MessageSourceMap {
-        'gh-issue-mention': {
-            kind: 'gh-issue-mention';
+        'github-picker-mention': {
+            kind: 'github-picker-mention';
             number: number;
         };
     }
@@ -38,15 +38,24 @@ export interface Mention {
  */
 export declare function scanMentions(text: string, repo: GitHubRepoRef): readonly Mention[];
 /**
+ * Collect the `escapedRepo#number` keys of the reference markers already
+ * present in the step messages. When a sibling plugin has marked the same
+ * references (identical marker text), this prevents duplicate injections.
+ * @param messages - the assembled step messages.
+ * @returns the present marker keys.
+ */
+export declare function referenceKeysOf(messages: readonly UserMessage[]): ReadonlySet<string>;
+/**
  * Expand every GitHub reference into a marker, in first-seen order. A bare
  * `#number` token resolves against the workspace repo; URL and
  * `@owner/repo#number` forms carry their own repository. The plugin has no
  * enable switch — references are always marked.
  * @param messages - the assembled step messages.
  * @param repo - the workspace repository identity (undefined = no bare-# resolution).
+ * @param existing - marker keys already present in the pipeline (deduplicated).
  * @returns the injected user messages (empty when nothing matched).
  */
-export declare function expandMentions(messages: readonly UserMessage[], repo: GitHubRepoRef | undefined): UserMessage[];
+export declare function expandMentions(messages: readonly UserMessage[], repo: GitHubRepoRef | undefined, existing?: ReadonlySet<string>): UserMessage[];
 /** The minimal agent face the pre-step handler reads. */
 export interface MentionAgent {
     session: {

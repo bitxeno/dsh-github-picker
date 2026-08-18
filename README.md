@@ -110,7 +110,7 @@ To install a local checkout instead (development builds or unreleased changes), 
 }
 ```
 
-Then `pnpm install` inside the profile and restart `dsh web`. Refresh the browser page. The plugin serves at `/plugins/dsh-github-picker/client.js` and the gateway routes `/api/ghIssue/*`. The client bundle is read per request, so a pure client change only needs a refresh; a Host contract change needs the `dsh web` restart.
+Then `pnpm install` inside the profile and restart `dsh web`. Refresh the browser page. The plugin serves at `/plugins/dsh-github-picker/client.js` and the gateway routes `/api/githubPicker/*`. The client bundle is read per request, so a pure client change only needs a refresh; a Host contract change needs the `dsh web` restart.
 
 ## License
 
