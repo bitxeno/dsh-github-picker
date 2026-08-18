@@ -3,7 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import { createRoot, type Root } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
-import { ERROR_HINT_KEY, GhIssuePickerButton, MAX_CANDIDATES, pickText, type PickerProps } from '../src/client/picker.tsx'
+import { ERROR_HINT_KEY, GhIssuePickerButton, pickText, type PickerProps } from '../src/client/picker.tsx'
 import type { GhIssueSettings, GitHubRepoRef, GitHubSearchResult } from '../src/contract.ts'
 import { RESULT_TTL_MS } from '../src/client/cache.ts'
 
@@ -31,7 +31,7 @@ const t = (key: string): string => key
 
 /** The component harness: live settings holder + search/setDraft spies. */
 function harness(over: Partial<Record<string, unknown>> = {}) {
-  const settings: GhIssueSettings = { insertFormat: 'ref' }
+  const settings: GhIssueSettings = { insertFormat: 'ref', defaultLimit: 20 }
   const search = vi.fn()
   const setDraft = vi.fn()
   const props = {
@@ -95,11 +95,11 @@ async function typeQuery(value: string): Promise<void> {
 
 describe('pickText', () => {
   it('inserts the @owner/repo#number form by default', () => {
-    expect(pickText(entry(125), repo, { insertFormat: 'ref' })).toBe('@bitxeno/atvloadly#125 ')
+    expect(pickText(entry(125), repo, { insertFormat: 'ref', defaultLimit: 20 })).toBe('@bitxeno/atvloadly#125 ')
   })
 
   it('inserts the GitHub URL when configured', () => {
-    expect(pickText(entry(125), repo, { insertFormat: 'url' })).toBe('https://github.com/bitxeno/atvloadly/issues/125 ')
+    expect(pickText(entry(125), repo, { insertFormat: 'url', defaultLimit: 20 })).toBe('https://github.com/bitxeno/atvloadly/issues/125 ')
   })
 })
 
@@ -197,13 +197,13 @@ describe('searching and picking', () => {
     expect(container.textContent).toContain('picker.empty')
   })
 
-  it('caps the visible rows', async () => {
-    const many = Array.from({ length: 20 }, (_, index) => entry(index + 1))
-    const { props, search } = harness()
+  it('caps the visible rows at the configured result limit', async () => {
+    const many = Array.from({ length: 30 }, (_, index) => entry(index + 1))
+    const { props, search, settings } = harness()
     search.mockResolvedValue(result(many))
     await render(props)
     await act(async () => { openButton().click() })
-    expect(container.querySelectorAll('button').length).toBe(MAX_CANDIDATES + 1)
+    expect(container.querySelectorAll('button').length).toBe(settings.defaultLimit + 1)
   })
 
   it('highlights a row on hover and resets it on leave', async () => {
@@ -245,7 +245,7 @@ describe('searching and picking', () => {
   it('picks the URL format when configured', async () => {
     const { props, search, setDraft } = harness()
     search.mockResolvedValue(result([entry(7, { kind: 'pr', url: 'https://github.com/bitxeno/atvloadly/pull/7' })]))
-    await render({ ...props, useSettings: (selector: (s: GhIssueSettings) => unknown) => selector({ insertFormat: 'url' }) })
+    await render({ ...props, useSettings: (selector: (s: GhIssueSettings) => unknown) => selector({ insertFormat: 'url', defaultLimit: 20 }) })
     await act(async () => { openButton().click() })
     await act(async () => { rowButtons()[0]?.click() })
     expect(setDraft).toHaveBeenCalledWith('hello https://github.com/bitxeno/atvloadly/pull/7 ')

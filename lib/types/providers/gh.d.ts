@@ -35,7 +35,8 @@ export declare function searchError(kind: GhSearchErrorKind, message: string): G
 /** Options for one gh provider search. */
 export interface GhSearchOptions {
     readonly command?: GhCommand;
-    readonly limit: number;
+    /** Hard cap on entries per search; a function is read live per call. */
+    readonly limit: number | (() => number);
     readonly timeoutMs: number;
 }
 /** The gh CLI search provider. */

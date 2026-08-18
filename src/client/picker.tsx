@@ -27,9 +27,6 @@ import { AlertIcon, GitHubMarkIcon, ghIcon } from './icons.tsx'
 import type { NS, GhIssueKey } from './locales.ts'
 import { RESULT_TTL_MS } from './cache.ts'
 
-/** Design cap on visible popup rows (mirrors the former @-trigger menu cap). */
-export const MAX_CANDIDATES = 12
-
 /** The locale key of the hint row for one search failure kind. */
 export const ERROR_HINT_KEY: Record<SearchErrorKind, GhIssueKey> = {
   'no-repo': 'picker.no-repo',
@@ -256,7 +253,7 @@ export function GhIssuePickerButton(props: PickerProps): React.ReactElement {
   useEffect(() => () => { loadController.current?.abort() }, [])
 
   const rows = loadState.phase === 'ready'
-    ? rankEntries(loadState.result.entries, query, MAX_CANDIDATES)
+    ? rankEntries(loadState.result.entries, query, settings.defaultLimit)
     : []
 
   return (

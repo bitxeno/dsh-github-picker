@@ -3,8 +3,6 @@ import type { ObservableSnapshot, SessionId } from '@deepseek-ai/dsh-client-runt
 import type { GitHubEntry, GitHubRepoRef, GitHubSearchResult, GhIssueSettings } from '../contract.ts';
 import type { SearchErrorKind } from './search.ts';
 import type { NS, GhIssueKey } from './locales.ts';
-/** Design cap on visible popup rows (mirrors the former @-trigger menu cap). */
-export declare const MAX_CANDIDATES = 12;
 /** The locale key of the hint row for one search failure kind. */
 export declare const ERROR_HINT_KEY: Record<SearchErrorKind, GhIssueKey>;
 /** The injected business face (the reserved hooks compartment binds `useSettings`). */

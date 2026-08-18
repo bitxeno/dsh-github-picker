@@ -93,11 +93,12 @@ export class GhIssueRuntime extends TypertRemoteService {
       throw new Error('dsh-github-picker: no GitHub repository detected (add a git remote)')
     }
     const entries = await this.gh.search(repo, query, signal)
+    const limit = this.readSettings().defaultLimit
     return {
       entries,
       repo,
       source: 'gh',
-      truncated: entries.length >= this.config.defaultLimit,
+      truncated: entries.length >= limit,
     }
   }
 

@@ -37,10 +37,10 @@ export interface Config extends ConfigInput {}
  * Configuration schema: deployment-varying bounds stay tunable from
  * the profile patch. The inferred schema type keeps the callable form accepting
  * partial input, so `Config({})` yields the defaults (what the Loader does
- * for Loader compositions).
+ * for Loader compositions). The search-result cap (`defaultLimit`) is not
+ * part of the deployed config — it lives in the durable settings page.
  */
 export const Config = z.object({
-  defaultLimit: z.natural().min(1).default(20),
   searchTimeoutMs: z.natural().min(100).default(15_000),
   repoCacheTtl: z.natural().min(100).default(30_000),
 })
@@ -61,10 +61,13 @@ export function apply(ctx: Context, config?: Config): void {
       case 'insertFormat':
         await scope.update({ insertFormat: update.value })
         break
+      case 'defaultLimit':
+        await scope.update({ defaultLimit: update.value })
+        break
     }
     return scope.get()
   }
-  const gh = new GhProvider({ limit: resolved.defaultLimit, timeoutMs: resolved.searchTimeoutMs })
+  const gh = new GhProvider({ limit: () => readSettings().defaultLimit, timeoutMs: resolved.searchTimeoutMs })
   const runtime = new GhIssueRuntime(
     ctx,
     resolved,

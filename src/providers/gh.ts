@@ -124,7 +124,8 @@ export function searchError(kind: GhSearchErrorKind, message: string): GhSearchE
 /** Options for one gh provider search. */
 export interface GhSearchOptions {
   readonly command?: GhCommand
-  readonly limit: number
+  /** Hard cap on entries per search; a function is read live per call. */
+  readonly limit: number | (() => number)
   readonly timeoutMs: number
 }
 
@@ -147,12 +148,13 @@ export class GhProvider implements SearchProvider {
    */
   async search(repo: GitHubRepoRef, query: string, signal: AbortSignal): Promise<GitHubEntry[]> {
     const command = this.options.command ?? ghCommand
+    const limit = typeof this.options.limit === 'function' ? this.options.limit() : this.options.limit
     const args = [
       'api',
       '-X', 'GET',
       'search/issues',
       '-f', `q=${buildQuery(repo, query)}`,
-      '-f', `per_page=${this.options.limit}`,
+      '-f', `per_page=${limit}`,
       '--jq', '.items[] | {number, title, state, html_url, pull_request, draft}',    ]
     let stdout: string
     try {
@@ -178,7 +180,7 @@ export class GhProvider implements SearchProvider {
     for (const item of items) {
       const entry = projectItem(item)
       if (entry !== undefined) entries.push(entry)
-      if (entries.length >= this.options.limit) break
+      if (entries.length >= limit) break
     }
     return entries
   }

@@ -1,10 +1,10 @@
 /**
- * The `github-picker` settings namespace: the durable insert format managed from
- * the Web settings page. Registered with the settings provider at plugin
- * load; the runtime reads the owner scope's live value on every call, so a
- * change takes effect without a restart. There is no enable switch — the
- * picker is always on. The data source is always the gh CLI and the
- * repository always resolves from the workspace git remote — there is no
+ * The `github-picker` settings namespace: the durable insert format and
+ * result cap managed from the Web settings page. Registered with the settings
+ * provider at plugin load; the runtime reads the owner scope's live value on
+ * every call, so a change takes effect without a restart. There is no enable
+ * switch — the picker is always on. The data source is always the gh CLI and
+ * the repository always resolves from the workspace git remote — there is no
  * device flow, no stored token, no override field.
  */
 import type { Context } from '@deepseek-ai/cordis';

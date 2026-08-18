@@ -44,11 +44,15 @@ describe('ghIssue wire codecs', () => {
     expect(() => gitHubSearchResultSchema.parse({ ...value, source: 'api' })).toThrow()
   })
 
-  it('round-trips settings and the insert-format update', () => {
-    const settings = { insertFormat: 'ref' }
+  it('round-trips settings and the field updates', () => {
+    const settings = { insertFormat: 'ref', defaultLimit: 20 }
     expect(ghIssueSettingsSchema.parse(settings)).toEqual(settings)
     expect(ghIssueSettingsUpdateSchema.parse({ field: 'insertFormat', value: 'url' })).toEqual({ field: 'insertFormat', value: 'url' })
     expect(() => ghIssueSettingsUpdateSchema.parse({ field: 'insertFormat', value: 'html' })).toThrow()
+    expect(ghIssueSettingsUpdateSchema.parse({ field: 'defaultLimit', value: 50 })).toEqual({ field: 'defaultLimit', value: 50 })
+    expect(() => ghIssueSettingsUpdateSchema.parse({ field: 'defaultLimit', value: 0 })).toThrow()
+    expect(() => ghIssueSettingsUpdateSchema.parse({ field: 'defaultLimit', value: 1.5 })).toThrow()
+    expect(() => ghIssueSettingsSchema.parse({ insertFormat: 'ref', defaultLimit: 0 })).toThrow()
     // The enable switch is gone with the update surface.
     expect(() => ghIssueSettingsUpdateSchema.parse({ field: 'enabled', value: true })).toThrow()
     expect(() => ghIssueSettingsUpdateSchema.parse({ field: 'nope', value: 1 })).toThrow()

@@ -63,6 +63,7 @@ Open **Settings -> GitHub 引用** to configure:
 
 - **Connection card** — the gh CLI connection status: a GitHub-marked card showing "GitHub **via gh CLI**" with a **Connected** (green) or **Not connected** pill.
 - **Insert format** — `@owner/repo#number` (default) or `GitHub URL` for the picked text.
+- **Result limit** — the maximum number of issues/PRs returned per search (default 20, 1–100).
 
 There is no enable switch: the picker is always available in the composer.
 
@@ -73,14 +74,14 @@ Host plugin configuration goes into the selected profile's `cordis.patch.yml`:
 ```yaml
 - id: dsh-github-picker
   config:
-    defaultLimit: 20
     searchTimeoutMs: 15000
     repoCacheTtl: 30000
 ```
 
-- `defaultLimit` caps entries per search (default 20).
 - `searchTimeoutMs` bounds provider calls (default 15000).
 - `repoCacheTtl` caches the resolved repository per workspace (default 30000 ms).
+
+The per-search result cap is a durable setting managed from **Settings -> GitHub 引用** (no Host restart needed to change it).
 
 A Host config change needs a `dsh web` restart; a pure client change only needs a browser refresh.
 

@@ -88,6 +88,20 @@ describe('GhProvider', () => {
     expect(entries[1]).toMatchObject({ number: 2, kind: 'pr' })
   })
 
+  it('reads a function limit live per call', async () => {
+    const stdout = [
+      JSON.stringify({ number: 1, title: 'one', state: 'open', html_url: 'u1', pull_request: null }),
+      JSON.stringify({ number: 2, title: 'two', state: 'open', html_url: 'u2', pull_request: null }),
+      JSON.stringify({ number: 3, title: 'three', state: 'open', html_url: 'u3', pull_request: null }),
+    ].join('\n')
+    let limit = 3
+    const provider = new GhProvider({ command: commandReturning(stdout), limit: () => limit, timeoutMs: 1000 })
+    const signal = new AbortController().signal
+    expect((await provider.search(repo, '', signal))).toHaveLength(3)
+    limit = 1
+    expect((await provider.search(repo, '', signal))).toHaveLength(1)
+  })
+
   it('propagates classified search errors', async () => {
     const provider = new GhProvider({
       command: { run: async () => { throw searchError('rate-limited', 'rate limited') } },

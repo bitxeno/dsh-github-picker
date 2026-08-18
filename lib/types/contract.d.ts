@@ -41,11 +41,16 @@ export interface GitHubSearchResult {
 export interface GhIssueSettings {
     /** Inserted reference format: the @owner/repo#number form (default) or the plain GitHub URL. */
     readonly insertFormat: 'url' | 'ref';
+    /** Hard cap on entries per search round-trip. */
+    readonly defaultLimit: number;
 }
 /** One field update sent through the plugin-owned settings Remote. */
 export type GhIssueSettingsUpdate = {
     readonly field: 'insertFormat';
     readonly value: 'url' | 'ref';
+} | {
+    readonly field: 'defaultLimit';
+    readonly value: number;
 };
 /** One logged-in gh account (connection facts only; tokens never cross the wire). */
 export interface GhAuthAccount {
@@ -116,6 +121,7 @@ export declare const ghIssueSettingsSchema: z.ZodReadonly<z.ZodObject<{
         url: "url";
         ref: "ref";
     }>;
+    defaultLimit: z.ZodNumber;
 }, z.core.$strip>>;
 /** Wire codec: one field update. */
 export declare const ghIssueSettingsUpdateSchema: z.ZodDiscriminatedUnion<[z.ZodReadonly<z.ZodObject<{
@@ -124,6 +130,9 @@ export declare const ghIssueSettingsUpdateSchema: z.ZodDiscriminatedUnion<[z.Zod
         url: "url";
         ref: "ref";
     }>;
+}, z.core.$strip>>, z.ZodReadonly<z.ZodObject<{
+    field: z.ZodLiteral<"defaultLimit">;
+    value: z.ZodNumber;
 }, z.core.$strip>>], "field">;
 /** Wire codec: one logged-in gh account. */
 export declare const ghAuthAccountSchema: z.ZodReadonly<z.ZodObject<{

@@ -43,7 +43,7 @@ function settingsProvider(read: () => GhIssueSettings) {
 
 /** Default settings the tests start from. */
 function defaultSettings(): GhIssueSettings {
-  return { insertFormat: 'ref' }
+  return { insertFormat: 'ref', defaultLimit: 20 }
 }
 
 /** Mount the function-plugin module on a fresh context (harness test pattern). */
@@ -120,6 +120,8 @@ describe('dsh-github-picker host composition', () => {
     expect(original.getSettings()).toEqual(defaultSettings())
     await original.updateSettings({ field: 'insertFormat', value: 'url' })
     expect(original.getSettings().insertFormat).toBe('url')
+    await original.updateSettings({ field: 'defaultLimit', value: 50 })
+    expect(original.getSettings()).toMatchObject({ insertFormat: 'url', defaultLimit: 50 })
     await fiber.dispose()
   })
 
@@ -176,11 +178,32 @@ describe('dsh-github-picker host composition', () => {
     const result = await original.search('fix', agentWith('/tmp'), signal)
     expect(result.repo).toEqual({ owner: 'o', name: 'r' })
     expect(result.source).toBe('gh')
+    expect(result.truncated).toBe(false)
     expect(result.entries).toEqual([
       { number: 42, title: 'Fix the bug', kind: 'issue', state: 'open', url: 'https://github.com/o/r/issues/42' },
       { number: 7, title: 'Draft PR', kind: 'pr', state: 'open', url: 'https://github.com/o/r/pull/7', draft: true },
     ])
     expect(execMock).toHaveBeenCalled()
+    execMock.mockReset()
+    await fiber.dispose()
+  })
+
+  it('caps and flags truncation by the live settings limit', async () => {
+    execMock.mockImplementation((file, _args, _options, callback) => {
+      if (file === 'git') {
+        callback(null, 'https://github.com/o/r.git\n')
+        return
+      }
+      callback(null, [ghItem(42, 'first'), ghItem(7, 'second'), ghItem(9, 'third')].join('\n'))
+    })
+    const ctx = new Context()
+    const readSettings = (): GhIssueSettings => ({ insertFormat: 'ref', defaultLimit: 2 })
+    const { fiber, service } = await mount(ctx, undefined, readSettings)
+    const original = service as unknown as GhIssueRuntime
+    const signal = new AbortController().signal
+    const result = await original.search('fix', agentWith('/tmp'), signal)
+    expect(result.entries).toHaveLength(2)
+    expect(result.truncated).toBe(true)
     execMock.mockReset()
     await fiber.dispose()
   })

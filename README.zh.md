@@ -63,6 +63,7 @@ https://github.com/owner/name/issues/125        # 格式 url
 
 - **连接卡片**——gh CLI 连接状态：带 GitHub 图标的卡片显示「GitHub **通过 gh CLI**」，右侧为**已连接**（绿色）或**未连接**徽章。
 - **插入格式**——落稿为 `@owner/repo#编号`（默认）或 `GitHub URL`。
+- **结果数量上限**——每次搜索返回的 Issue/PR 数量上限（默认 20，范围 1–100）。
 
 没有「启用」开关：选择器在输入框中始终可用。
 
@@ -73,14 +74,14 @@ Host 插件配置写入所选 profile 的 `cordis.patch.yml`：
 ```yaml
 - id: dsh-github-picker
   config:
-    defaultLimit: 20
     searchTimeoutMs: 15000
     repoCacheTtl: 30000
 ```
 
-- `defaultLimit`——每次搜索的条目上限（默认 20）。
 - `searchTimeoutMs`——数据源调用超时（默认 15000 毫秒）。
 - `repoCacheTtl`——仓库解析结果按工作区缓存时长（默认 30000 毫秒）。
+
+每次搜索的条目上限已改为**设置 → GitHub 引用**里的持久化选项，无需重启 Host 即可生效。
 
 修改 Host 配置后需重启 `dsh web`；纯客户端改动只需刷新浏览器。
 

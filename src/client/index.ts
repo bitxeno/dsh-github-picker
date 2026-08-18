@@ -52,7 +52,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-github-picker: dictionaries')
 
   // The plugin's own settings snapshot (loaded from the Host on mount).
-  let settings: GhIssueSettings = { insertFormat: 'ref' }
+  let settings: GhIssueSettings = { insertFormat: 'ref', defaultLimit: 20 }
   const settingsListeners = new Set<() => void>()
   const notifySettings = (): void => {
     for (const listener of [...settingsListeners]) listener()

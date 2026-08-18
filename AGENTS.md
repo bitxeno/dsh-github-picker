@@ -17,8 +17,8 @@ src/mention.ts      Host pre-step scanner: URLs, @owner/repo#number, and bare #n
                     → <github-reference> markers (source `github-picker-mention`)
 src/contract.ts     one shared descriptor set + zod codecs + entry/config types
 src/typert.ts       strict host Typert manifest, registered via ctx.typert.register
-src/settings.ts     the `github-picker` settings namespace (insert format only; no enable
-                    switch — the picker is always on)
+src/settings.ts     the `github-picker` settings namespace (insert format + result limit;
+                    no enable switch — the picker is always on)
 src/gh-auth.ts      reads `gh auth status --json hosts` → the account-connection status (no token material)
 src/repo.ts         git remote URL parsing (https/ssh/git@ forms) + per-workspace TTL cache
 src/providers/      SearchProvider seam: gh.ts only (gh api search/issues, NDJSON). No device flow,
@@ -33,7 +33,8 @@ src/client/         browser half, served as the single file /plugins/dsh-github-
                     searchable list from the host search, filters locally via search.ts,
                     inserts via inputActions.setDraft, failure hint row (localized, unpickable)
   SettingsSection.tsx  settings.section (id 'github-settings', order 55): the gh connection
-                    card (via gh CLI) + the insert-format select. No enable switch.
+                    card (via gh CLI) + the insert-format select + the result-limit input
+                    (local draft, committed on blur/Enter). No enable switch.
   styles.ts         settings-section stylesheet (`--dsw-alias-*` tokens, `dsh_atGh` prefix);
                     the picker popup styles are inline in picker.tsx
   remote.ts         the shared-descriptors client contribution for ctx.remote.$mount
@@ -70,10 +71,11 @@ tests/              node-env specs (11 files); jsdom pragma where a browser API 
   `typeSymbol` must stay `@deepseek-ai/dsh-session/types#SessionId`.
 - The plugin registers the `github-picker` namespace through `ctx.settings.register`
   — **no enable switch exists, the picker is always on** and the namespace
-  holds only `insertFormat`. The public DSH package does not expose that
-  namespace through `WEB_SETTINGS_NAMESPACES`; browser reads and writes MUST
-  use `githubPicker/getSettings` and `githubPicker/updateSettings` (the Host
-  methods own normalization and call the owner settings scope).
+  holds only `insertFormat` and `defaultLimit`. The public DSH package does
+  not expose that namespace through `WEB_SETTINGS_NAMESPACES`; browser reads
+  and writes MUST use `githubPicker/getSettings` and
+  `githubPicker/updateSettings` (the Host methods own normalization and call
+  the owner settings scope).
 - The client composes only through the standing seams (`ctx.remote.$mount`,
   `ctx.slots.register`, `ctx.locale.register`). The mounted Remote namespace
   is resolved through

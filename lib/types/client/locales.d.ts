@@ -25,6 +25,8 @@ export declare const zh: {
     'settings.insertFormat.url': string;
     'settings.insertFormat.ref': string;
     'settings.insertFormatDesc': string;
+    'settings.defaultLimit': string;
+    'settings.defaultLimitDesc': string;
     'settings.authStatus.title': string;
     'settings.authStatus.via': string;
     'settings.authStatus.cli': string;
@@ -58,6 +60,8 @@ export declare const en: {
     'settings.insertFormat.url': string;
     'settings.insertFormat.ref': string;
     'settings.insertFormatDesc': string;
+    'settings.defaultLimit': string;
+    'settings.defaultLimitDesc': string;
     'settings.authStatus.title': string;
     'settings.authStatus.via': string;
     'settings.authStatus.cli': string;
