@@ -27,7 +27,7 @@ export const TYPERT_MANIFEST: TypertContribution = {
           {
             kind: 'method',
             name: 'search',
-            signature: 'search(query: string, agent: Agent, signal: AbortSignal): Promise<GitHubSearchResult>',
+            signature: 'search(query: string, page: number, agent: Agent, signal: AbortSignal): Promise<GitHubSearchResult>',
           },
           {
             kind: 'method',

@@ -63,7 +63,8 @@ Open **Settings -> GitHub 引用** to configure:
 
 - **Connection card** — the gh CLI connection status: a GitHub-marked card showing "GitHub **via gh CLI**" with a **Connected** (green) or **Not connected** pill.
 - **Insert format** — `@owner/repo#number` (default) or `GitHub URL` for the picked text.
-- **Result limit** — the maximum number of issues/PRs returned per search (default 20, 1–100).
+
+The list loads 12 entries per page and fetches the next page as you scroll to the bottom, through the end of the result set — there is no result cap.
 
 There is no enable switch: the picker is always available in the composer.
 
@@ -89,7 +90,7 @@ A Host config change needs a `dsh web` restart; a pure client change only needs 
 
 - The picker is a component in the framework's `conversation.input.right` composer slot (the seat just before the send button), the same seam the reference dsh-skill-picker uses: an icon button whose popup is a plain sibling positioned `absolute; bottom: calc(100% + 8px); right: 0` inside a relative wrapper. No custom trigger, overlay, or keyboard capture exists.
 - Picking writes the full next draft through the framework input machine (`inputActions.setDraft`), so undo history and the Host's mention scanning work automatically.
-- The popup loads the recent issue/PR list once per open (cached per session for 30 seconds; reopening is instant within the TTL and refetches after it) and filters locally per keystroke, so typing never stacks provider calls.
+- The popup loads the recent issue/PR list page by page (12 per page) and fetches the next page as you scroll to the bottom, through the end of the result set — there is no result cap (cached per session for 30 seconds; reopening is instant within the TTL and refetches after it), then filters locally per keystroke, so typing never stacks provider calls.
 - The `#number` / URL / `@owner/repo#number` mention grammar is shared by the Host's pre-step scanner (`scanMentions`) and the picker's inserted text; keep them in sync when changing either.
 - A search failure is classified and rendered in the popup as one localized hint row (see the `picker.error.*` copy in `src/client/locales.ts`), so "gh is not installed" is visible instead of a silent close.
 

@@ -17,7 +17,7 @@ src/mention.ts      Host pre-step scanner: URLs, @owner/repo#number, and bare #n
                     → <github-reference> markers (source `github-picker-mention`)
 src/contract.ts     one shared descriptor set + zod codecs + entry/config types
 src/typert.ts       strict host Typert manifest, registered via ctx.typert.register
-src/settings.ts     the `github-picker` settings namespace (insert format + result limit;
+src/settings.ts     the `github-picker` settings namespace (insert format;
                     no enable switch — the picker is always on)
 src/gh-auth.ts      reads `gh auth status --json hosts` → the account-connection status (no token material)
 src/repo.ts         git remote URL parsing (https/ssh/git@ forms) + per-workspace TTL cache
@@ -30,11 +30,12 @@ src/client/         browser half, served as the single file /plugins/dsh-github-
   picker.tsx        the composer control for `conversation.input.right` (list slot, id
                     'gh-issue-picker', order 100): a GitHub-mark button whose popup is a
                     plain sibling (absolute, bottom: calc(100% + 8px), right: 0). Opens a
-                    searchable list from the host search, filters locally via search.ts,
+                    searchable list from the host search (12 per page; scrolling to the
+                    bottom fetches the next page), filters locally via search.ts,
                     inserts via inputActions.setDraft, failure hint row (localized, unpickable)
   SettingsSection.tsx  settings.section (id 'github-settings', order 55): the gh connection
-                    card (via gh CLI) + the insert-format select + the result-limit input
-                    (local draft, committed on blur/Enter). No enable switch.
+                    card (via gh CLI) + the insert-format select. No enable switch,
+                    no result limit — the popup scrolls through every page.
   styles.ts         settings-section stylesheet (`--dsw-alias-*` tokens, `dsh_atGh` prefix);
                     the picker popup styles are inline in picker.tsx
   remote.ts         the shared-descriptors client contribution for ctx.remote.$mount
@@ -71,7 +72,7 @@ tests/              node-env specs (11 files); jsdom pragma where a browser API 
   `typeSymbol` must stay `@deepseek-ai/dsh-session/types#SessionId`.
 - The plugin registers the `github-picker` namespace through `ctx.settings.register`
   — **no enable switch exists, the picker is always on** and the namespace
-  holds only `insertFormat` and `defaultLimit`. The public DSH package does
+  holds only `insertFormat`. The public DSH package does
   not expose that namespace through `WEB_SETTINGS_NAMESPACES`; browser reads
   and writes MUST use `githubPicker/getSettings` and
   `githubPicker/updateSettings` (the Host methods own normalization and call
@@ -96,10 +97,13 @@ tests/              node-env specs (11 files); jsdom pragma where a browser API 
   custom `#` trigger and the standard `@` source; those files (trigger/
   keyboard/menu-state/menu/dock/position/source.ts) were deleted in the
   composer-slot refactor.
-- The popup loads the recent list once per open (query `''`, cached per
-  session with a 30s TTL) and filters locally via `rankEntries`, so typing
-  never stacks provider calls. A search failure is classified by
-  `classifySearchError` and rendered as one localized, unpickable hint row.
+- The popup loads the first result page once per open (query `''`, cached per
+  session AND page with a 30s TTL) and fetches the next `PICKER_PAGE_SIZE`
+  page as the list scrolls toward the bottom, until the end of the result
+  set (no cap — endless scroll). Filtering happens
+  locally via `rankEntries`, so typing never stacks provider calls. A search
+  failure is classified by `classifySearchError` and rendered as one
+  localized, unpickable hint row.
 - The mention grammar (bare `#number`, `@owner/repo#number`, and issue/PR
   URLs) is scanned by the host's `scanMentions`; the picker's inserted text
   must stay within those three forms so the pre-step always marks picks.

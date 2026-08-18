@@ -12,10 +12,17 @@ import type { GitHubRepoRef } from '../src/contract.ts'
 
 const repo: GitHubRepoRef = { owner: 'owner', name: 'name' }
 
-/** A command seam that returns a fixed payload. */
-function commandReturning(stdout: string) {
+/** A command seam that returns a fixed payload and records the gh args. */
+function capturingCommand(stdout: string) {
+  const calls: string[][] = []
   return {
-    run: async (): Promise<string> => stdout,
+    calls,
+    command: {
+      run: async (args: readonly string[]): Promise<string> => {
+        calls.push([...args])
+        return stdout
+      },
+    },
   }
 }
 
@@ -74,69 +81,61 @@ describe('classifyGhError', () => {
 })
 
 describe('GhProvider', () => {
-  it('searches and projects the JSON payload, capped at the limit', async () => {
+  it('returns one bounded page and sends the page argument', async () => {
     const stdout = [
       JSON.stringify({ number: 1, title: 'one', state: 'open', html_url: 'u1', pull_request: null, draft: false }),
       JSON.stringify({ number: 2, title: 'two', state: 'open', html_url: 'u2', pull_request: { draft: false }, draft: false }),
       JSON.stringify({ number: 3, title: 'three', state: 'open', html_url: 'u3', pull_request: null, draft: false }),
     ].join('\n')
-    const provider = new GhProvider({ command: commandReturning(stdout), limit: 2, timeoutMs: 1000 })
+    const { command, calls } = capturingCommand(stdout)
+    const provider = new GhProvider({ command, perPage: 2, timeoutMs: 1000 })
     const signal = new AbortController().signal
-    const entries = await provider.search(repo, 'bug', signal)
-    expect(entries).toHaveLength(2)
-    expect(entries[0]).toMatchObject({ number: 1, kind: 'issue' })
-    expect(entries[1]).toMatchObject({ number: 2, kind: 'pr' })
-  })
-
-  it('reads a function limit live per call', async () => {
-    const stdout = [
-      JSON.stringify({ number: 1, title: 'one', state: 'open', html_url: 'u1', pull_request: null }),
-      JSON.stringify({ number: 2, title: 'two', state: 'open', html_url: 'u2', pull_request: null }),
-      JSON.stringify({ number: 3, title: 'three', state: 'open', html_url: 'u3', pull_request: null }),
-    ].join('\n')
-    let limit = 3
-    const provider = new GhProvider({ command: commandReturning(stdout), limit: () => limit, timeoutMs: 1000 })
-    const signal = new AbortController().signal
-    expect((await provider.search(repo, '', signal))).toHaveLength(3)
-    limit = 1
-    expect((await provider.search(repo, '', signal))).toHaveLength(1)
+    const page1 = await provider.search(repo, 'bug', 1, signal)
+    expect(page1).toHaveLength(2)
+    expect(page1[0]).toMatchObject({ number: 1, kind: 'issue' })
+    expect(page1[1]).toMatchObject({ number: 2, kind: 'pr' })
+    expect(calls[0]).toEqual(expect.arrayContaining(['-f', 'per_page=2', '-f', 'page=1']))
+    const page2 = await provider.search(repo, 'bug', 2, signal)
+    expect(page2).toHaveLength(2)
+    expect(calls[1]).toEqual(expect.arrayContaining(['-f', 'page=2']))
   })
 
   it('propagates classified search errors', async () => {
     const provider = new GhProvider({
       command: { run: async () => { throw searchError('rate-limited', 'rate limited') } },
-      limit: 10,
+      perPage: 10,
       timeoutMs: 1000,
     })
     const signal = new AbortController().signal
-    await expect(provider.search(repo, '', signal)).rejects.toMatchObject({ kind: 'rate-limited' })
+    await expect(provider.search(repo, '', 1, signal)).rejects.toMatchObject({ kind: 'rate-limited' })
   })
 
   it('classifies raw non-Error command failures', async () => {
     const provider = new GhProvider({
       command: { run: async () => { throw 'plain string failure' } },
-      limit: 10,
+      perPage: 10,
       timeoutMs: 1000,
     })
     const signal = new AbortController().signal
-    await expect(provider.search(repo, '', signal)).rejects.toMatchObject({ kind: 'unknown' })
+    await expect(provider.search(repo, '', 1, signal)).rejects.toMatchObject({ kind: 'unknown' })
   })
 
   it('propagates abort reasons', async () => {
     const provider = new GhProvider({
       command: { run: async () => { throw new DOMException('Aborted', 'AbortError') } },
-      limit: 10,
+      perPage: 10,
       timeoutMs: 1000,
     })
     const controller = new AbortController()
     controller.abort()
-    await expect(provider.search(repo, '', controller.signal)).rejects.toThrow()
+    await expect(provider.search(repo, '', 1, controller.signal)).rejects.toThrow()
   })
 
   it('returns an empty list for empty JSON', async () => {
-    const provider = new GhProvider({ command: commandReturning('[]'), limit: 10, timeoutMs: 1000 })
+    const { command } = capturingCommand('[]')
+    const provider = new GhProvider({ command, perPage: 10, timeoutMs: 1000 })
     const signal = new AbortController().signal
-    await expect(provider.search(repo, '', signal)).resolves.toEqual([])
+    await expect(provider.search(repo, '', 1, signal)).resolves.toEqual([])
   })
 })
 

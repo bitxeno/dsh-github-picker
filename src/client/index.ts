@@ -31,7 +31,7 @@ export const inject = ['remote', 'slots', 'locale']
 
 /** The mounted githubPicker namespace service's callable face. */
 interface GhIssueFace {
-  search(query: string, sessionId: SessionId, signal?: AbortSignal): Promise<{ ok: true; value: GitHubSearchResult } | { ok: false; error: { code: string; message: string; details: object } }>
+  search(query: string, page: number, sessionId: SessionId, signal?: AbortSignal): Promise<{ ok: true; value: GitHubSearchResult } | { ok: false; error: { code: string; message: string; details: object } }>
   getSettings(): Promise<{ ok: true; value: GhIssueSettings } | { ok: false; error: { code: string; message: string; details: object } }>
   updateSettings(update: GhIssueSettingsUpdate): Promise<{ ok: true; value: GhIssueSettings } | { ok: false; error: { code: string; message: string; details: object } }>
   getGhAuthStatus(): Promise<{ ok: true; value: GhAuthStatus } | { ok: false; error: { code: string; message: string; details: object } }>
@@ -52,7 +52,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-github-picker: dictionaries')
 
   // The plugin's own settings snapshot (loaded from the Host on mount).
-  let settings: GhIssueSettings = { insertFormat: 'ref', defaultLimit: 20 }
+  let settings: GhIssueSettings = { insertFormat: 'ref' }
   const settingsListeners = new Set<() => void>()
   const notifySettings = (): void => {
     for (const listener of [...settingsListeners]) listener()
@@ -82,10 +82,10 @@ export function apply(ctx: ClientContext): void {
     }
   }, 'dsh-github-picker: remote')
 
-  // The per-session result cache (session-keyed inside HashCache).
-  const cache = new HashCache(async (query, sessionId, signal) => {
+  // The per-session result cache (session- and page-keyed inside HashCache).
+  const cache = new HashCache(async (query, page, sessionId, signal) => {
     if (remote === undefined) throw new Error('dsh-github-picker: the githubPicker Remote is not mounted')
-    const result = await remote.search(query, sessionId, signal)
+    const result = await remote.search(query, page, sessionId, signal)
     if (!result.ok) {
       const error = new Error(result.error.message) as Error & { kind?: string }
       error.kind = wireErrorKind(result.error.code, result.error.message)
@@ -118,7 +118,7 @@ export function apply(ctx: ClientContext): void {
       locale: NS,
       inject: (): PickerInjected => ({
         hooks: { settings: settingsSnapshot },
-        search: (query, sessionId, signal) => cache.resolve(query, sessionId, signal),
+        search: (query, page, sessionId, signal) => cache.resolve(query, page, sessionId, signal),
       }),
     }, GhIssuePickerButton))
     return dispose

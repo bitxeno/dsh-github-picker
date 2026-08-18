@@ -19,24 +19,25 @@ function result(numbers: readonly number[]): GitHubSearchResult {
 }
 
 describe('HashCache', () => {
-  it('serves the settled result for the same query without refetching', async () => {
-    const search = vi.fn(async (_query: string, _id: unknown, _signal: AbortSignal) => result([1]))
+  it('serves the settled result for the same query page without refetching', async () => {
+    const search = vi.fn(async (_query: string, _page: number, _id: unknown, _signal: AbortSignal) => result([1]))
     const cache = new HashCache(search)
     const signal = new AbortController().signal
-    await cache.resolve('bug', 's1', signal)
-    await cache.resolve('bug', 's1', signal)
+    await cache.resolve('bug', 1, 's1', signal)
+    await cache.resolve('bug', 1, 's1', signal)
     expect(search).toHaveBeenCalledTimes(1)
-    expect(cache.settled('s1', 'bug')).toBeDefined()
+    expect(cache.settled('s1', 'bug', 1)).toBeDefined()
   })
 
-  it('refetches per session and per query', async () => {
-    const search = vi.fn(async (query: string) => result(query === '' ? [1, 2] : [1]))
+  it('refetches per session, per query, and per page', async () => {
+    const search = vi.fn(async (query: string, page: number) => result(query === '' && page === 1 ? [1, 2] : [1]))
     const cache = new HashCache(search)
     const signal = new AbortController().signal
-    await cache.resolve('', 's1', signal)
-    await cache.resolve('bug', 's1', signal)
-    await cache.resolve('', 's2', signal)
-    expect(search).toHaveBeenCalledTimes(3)
+    await cache.resolve('', 1, 's1', signal)
+    await cache.resolve('bug', 1, 's1', signal)
+    await cache.resolve('', 2, 's1', signal)
+    await cache.resolve('', 1, 's2', signal)
+    expect(search).toHaveBeenCalledTimes(4)
   })
 
   it('refetches after the TTL expires', async () => {
@@ -44,20 +45,20 @@ describe('HashCache', () => {
     let now = 1000
     const cache = new HashCache(search, () => now)
     const signal = new AbortController().signal
-    await cache.resolve('bug', 's1', signal)
+    await cache.resolve('bug', 1, 's1', signal)
     now += RESULT_TTL_MS + 1
-    await cache.resolve('bug', 's1', signal)
+    await cache.resolve('bug', 1, 's1', signal)
     expect(search).toHaveBeenCalledTimes(2)
   })
 
-  it('drops the settled snapshot when a query goes cold', async () => {
+  it('drops the settled snapshot when a query page goes cold', async () => {
     const search = vi.fn(async () => result([1]))
     const cache = new HashCache(search, () => 1000)
     const signal = new AbortController().signal
-    await cache.resolve('bug', 's1', signal)
-    expect(cache.settled('s1', 'bug')).toBeDefined()
+    await cache.resolve('bug', 1, 's1', signal)
+    expect(cache.settled('s1', 'bug', 1)).toBeDefined()
     cache.invalidateAll()
-    expect(cache.settled('s1', 'bug')).toBeUndefined()
+    expect(cache.settled('s1', 'bug', 1)).toBeUndefined()
   })
 
   it('yields early for superseded signals without poisoning the cache', async () => {
@@ -65,12 +66,12 @@ describe('HashCache', () => {
     const search = vi.fn(async () => new Promise<GitHubSearchResult>(resolve => { resolveSearch = resolve }))
     const cache = new HashCache(search)
     const controller = new AbortController()
-    const pending = cache.resolve('bug', 's1', controller.signal)
+    const pending = cache.resolve('bug', 1, 's1', controller.signal)
     controller.abort()
     const settled = result([1])
     resolveSearch?.(settled)
     await expect(pending).rejects.toBeDefined()
     // The shared fetch still settled for later consumers.
-    expect(cache.settled('s1', 'bug')).toBeDefined()
+    expect(cache.settled('s1', 'bug', 1)).toBeDefined()
   })
 })

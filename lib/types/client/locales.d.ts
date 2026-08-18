@@ -11,6 +11,7 @@ export declare const zh: {
     'picker.open': string;
     'picker.search': string;
     'picker.loading': string;
+    'picker.loadingMore': string;
     'picker.empty': string;
     'picker.no-repo': string;
     'picker.error.gh-missing': string;
@@ -25,8 +26,6 @@ export declare const zh: {
     'settings.insertFormat.url': string;
     'settings.insertFormat.ref': string;
     'settings.insertFormatDesc': string;
-    'settings.defaultLimit': string;
-    'settings.defaultLimitDesc': string;
     'settings.authStatus.title': string;
     'settings.authStatus.via': string;
     'settings.authStatus.cli': string;
@@ -46,6 +45,7 @@ export declare const en: {
     'picker.open': string;
     'picker.search': string;
     'picker.loading': string;
+    'picker.loadingMore': string;
     'picker.empty': string;
     'picker.no-repo': string;
     'picker.error.gh-missing': string;
@@ -60,8 +60,6 @@ export declare const en: {
     'settings.insertFormat.url': string;
     'settings.insertFormat.ref': string;
     'settings.insertFormatDesc': string;
-    'settings.defaultLimit': string;
-    'settings.defaultLimitDesc': string;
     'settings.authStatus.title': string;
     'settings.authStatus.via': string;
     'settings.authStatus.cli': string;

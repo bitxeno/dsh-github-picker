@@ -20,6 +20,7 @@ import type {
   GitHubRepoRef,
   GitHubSearchResult,
 } from './contract.ts'
+import { PICKER_PAGE_SIZE } from './contract.ts'
 import type { ResolvedConfig } from './types.ts'
 import { RepoResolver } from './repo.ts'
 import type { SearchProvider } from './providers/contract.ts'
@@ -74,16 +75,19 @@ export class GhIssueRuntime extends TypertRemoteService {
   }
 
   /**
-   * Search the addressed agent's repository for issues and pull requests
-   * through the gh CLI.
+   * Search one page of the addressed agent's repository for issues and pull
+   * requests through the gh CLI. The popup loads page 1 on open and fetches
+   * the next page as the list scrolls toward the bottom.
    * @param query - the typed query ('' lists recent items).
+   * @param page - the 1-based page of the result set.
    * @param agent - the live agent resolved from the `agentId` wire field; its
    *   session header owns the workspace cwd.
    * @param signal - caller lifetime; the provider races it.
-   * @returns the bounded entry list and the resolved repository identity.
+   * @returns one bounded page and the resolved repository identity; `truncated`
+   *   reports whether a fuller page exists (the sentinel for the next page).
    */
   @Remote
-  async search(query: string, agent: Agent, signal: AbortSignal): Promise<GitHubSearchResult> {
+  async search(query: string, page: number, agent: Agent, signal: AbortSignal): Promise<GitHubSearchResult> {
     const cwd = agent.session.header.cwd
     if (cwd === undefined) {
       throw new Error('dsh-github-picker: the session has no workspace directory')
@@ -92,13 +96,12 @@ export class GhIssueRuntime extends TypertRemoteService {
     if (repo === undefined) {
       throw new Error('dsh-github-picker: no GitHub repository detected (add a git remote)')
     }
-    const entries = await this.gh.search(repo, query, signal)
-    const limit = this.readSettings().defaultLimit
+    const entries = await this.gh.search(repo, query, page, signal)
     return {
       entries,
       repo,
       source: 'gh',
-      truncated: entries.length >= limit,
+      truncated: entries.length >= PICKER_PAGE_SIZE,
     }
   }
 

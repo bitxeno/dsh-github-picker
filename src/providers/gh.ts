@@ -124,8 +124,8 @@ export function searchError(kind: GhSearchErrorKind, message: string): GhSearchE
 /** Options for one gh provider search. */
 export interface GhSearchOptions {
   readonly command?: GhCommand
-  /** Hard cap on entries per search; a function is read live per call. */
-  readonly limit: number | (() => number)
+  /** Entries per search page. */
+  readonly perPage: number
   readonly timeoutMs: number
 }
 
@@ -140,21 +140,22 @@ export class GhProvider implements SearchProvider {
   constructor(private readonly options: GhSearchOptions) {}
 
   /**
-   * Search one repository through the gh CLI.
+   * Search one repository page through the gh CLI.
    * @param repo - the resolved repository identity.
    * @param query - the typed # query ('' lists recently updated).
+   * @param page - the 1-based page of the result set.
    * @param signal - caller lifetime.
-   * @returns the bounded, projected entries.
+   * @returns the bounded page entries.
    */
-  async search(repo: GitHubRepoRef, query: string, signal: AbortSignal): Promise<GitHubEntry[]> {
+  async search(repo: GitHubRepoRef, query: string, page: number, signal: AbortSignal): Promise<GitHubEntry[]> {
     const command = this.options.command ?? ghCommand
-    const limit = typeof this.options.limit === 'function' ? this.options.limit() : this.options.limit
     const args = [
       'api',
       '-X', 'GET',
       'search/issues',
       '-f', `q=${buildQuery(repo, query)}`,
-      '-f', `per_page=${limit}`,
+      '-f', `per_page=${this.options.perPage}`,
+      '-f', `page=${page}`,
       '--jq', '.items[] | {number, title, state, html_url, pull_request, draft}',    ]
     let stdout: string
     try {
@@ -180,7 +181,7 @@ export class GhProvider implements SearchProvider {
     for (const item of items) {
       const entry = projectItem(item)
       if (entry !== undefined) entries.push(entry)
-      if (entries.length >= limit) break
+      if (entries.length >= this.options.perPage) break
     }
     return entries
   }

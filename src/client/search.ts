@@ -2,19 +2,20 @@
  * Pure ranking for the # picker menu. A query that is (or starts with) a
  * number ranks matching numbers first — GitHub's # autocomplete favors the
  * exact/prefix number — then falls back to title substring matching. The
- * empty query keeps the provider's recency order unchanged.
+ * empty query keeps the provider's recency order unchanged. Every loaded
+ * entry is ranked (matches are never capped — the popup scrolls through all
+ * pages the provider returns).
  */
 import type { GitHubEntry } from '../contract.ts'
 
-/** Ranked top-N entries matching `query` (ties by number desc, then title). */
+/** All entries matching `query`, ranked (ties by number desc, then title). */
 export function rankEntries(
   entries: readonly GitHubEntry[],
   query: string,
-  limit: number,
 ): readonly GitHubEntry[] {
   const q = query.trim()
   if (q === '') {
-    return [...entries].slice(0, limit)
+    return [...entries]
   }
   const numeric = /^\d+$/u.test(q)
   const scored = entries
@@ -23,7 +24,7 @@ export function rankEntries(
   scored.sort((a, b) => b.score - a.score
     || b.entry.number - a.entry.number
     || (a.entry.title < b.entry.title ? -1 : 1))
-  return scored.slice(0, limit).map(candidate => candidate.entry)
+  return scored.map(candidate => candidate.entry)
 }
 
 /** Score one entry: number exact > number prefix > title contains > title prefix. */

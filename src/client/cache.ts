@@ -14,7 +14,7 @@ export const RESULT_TTL_MS = 30_000
 
 /** The search seam the wiring layer injects (the Remote wrapper). */
 export interface HashSearch {
-  (query: string, sessionId: SessionId, signal: AbortSignal): Promise<GitHubSearchResult>
+  (query: string, page: number, sessionId: SessionId, signal: AbortSignal): Promise<GitHubSearchResult>
 }
 
 /** One cached query result. */
@@ -41,37 +41,44 @@ export class HashCache {
     this.bySession.clear()
   }
 
-  /** The settled result for one query, or undefined when cold. */
-  settled(sessionId: SessionId, query: string): GitHubSearchResult | undefined {
-    const entry = this.bySession.get(sessionId)?.get(query)
+  /** Cache key: the exact query and page (pages accumulate on scroll). */
+  private static key(query: string, page: number): string {
+    return `${query}\u0000${page}`
+  }
+
+  /** The settled result for one query page, or undefined when cold. */
+  settled(sessionId: SessionId, query: string, page: number): GitHubSearchResult | undefined {
+    const entry = this.bySession.get(sessionId)?.get(HashCache.key(query, page))
     if (entry === undefined || entry.settled === undefined) return undefined
     return entry.settled
   }
 
   /**
-   * Resolve one query: serve the hot settled result or fetch once, sharing
-   * the in-flight promise across concurrent callers.
+   * Resolve one query page: serve the hot settled result or fetch once,
+   * sharing the in-flight promise across concurrent callers.
    * @param query - the typed # query.
+   * @param page - the 1-based page of the result set.
    * @param sessionId - the addressed session.
    * @param signal - per-keystroke lifetime (superseded queries yield early).
    */
-  resolve(query: string, sessionId: SessionId, signal: AbortSignal): Promise<GitHubSearchResult> {
+  resolve(query: string, page: number, sessionId: SessionId, signal: AbortSignal): Promise<GitHubSearchResult> {
     const sessions = this.bySession
     let queries = sessions.get(sessionId)
     if (queries === undefined) {
       queries = new Map()
       sessions.set(sessionId, queries)
     }
+    const key = HashCache.key(query, page)
     const now = this.now()
-    const existing = queries.get(query)
+    const existing = queries.get(key)
     if (existing !== undefined && existing.settled !== undefined && now - existing.at < RESULT_TTL_MS) {
       return Promise.resolve(existing.settled)
     }
     if (existing !== undefined && now - existing.at >= RESULT_TTL_MS) {
-      queries.delete(query)
+      queries.delete(key)
     }
-    const promise = this.search(query, sessionId, signal).then(result => {
-      queries?.set(query, { settled: result, at: this.now() })
+    const promise = this.search(query, page, sessionId, signal).then(result => {
+      queries?.set(key, { settled: result, at: this.now() })
       return result
     })
     // A superseded keystroke just yields early; the shared fetch stays warm.

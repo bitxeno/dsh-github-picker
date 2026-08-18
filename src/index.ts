@@ -21,7 +21,7 @@ import { TYPERT_MANIFEST } from './typert.ts'
 import { registerGhIssueSettings } from './settings.ts'
 import { GhProvider, ghCommand } from './providers/gh.ts'
 import { mentionPreStep, type MentionRepoResolver } from './mention.ts'
-import type { GhIssueSettings, GhIssueSettingsUpdate } from './contract.ts'
+import { PICKER_PAGE_SIZE, type GhIssueSettings, type GhIssueSettingsUpdate } from './contract.ts'
 import { resolveConfig, type ConfigInput, type ResolvedConfig } from './types.ts'
 
 /** Cordis plugin name (the Loader entry and client bundle id). */
@@ -37,8 +37,8 @@ export interface Config extends ConfigInput {}
  * Configuration schema: deployment-varying bounds stay tunable from
  * the profile patch. The inferred schema type keeps the callable form accepting
  * partial input, so `Config({})` yields the defaults (what the Loader does
- * for Loader compositions). The search-result cap (`defaultLimit`) is not
- * part of the deployed config — it lives in the durable settings page.
+ * for Loader compositions). The search result cap is fixed — the popup pages
+ * through every result the provider returns (12 per page).
  */
 export const Config = z.object({
   searchTimeoutMs: z.natural().min(100).default(15_000),
@@ -61,13 +61,10 @@ export function apply(ctx: Context, config?: Config): void {
       case 'insertFormat':
         await scope.update({ insertFormat: update.value })
         break
-      case 'defaultLimit':
-        await scope.update({ defaultLimit: update.value })
-        break
     }
     return scope.get()
   }
-  const gh = new GhProvider({ limit: () => readSettings().defaultLimit, timeoutMs: resolved.searchTimeoutMs })
+  const gh = new GhProvider({ perPage: PICKER_PAGE_SIZE, timeoutMs: resolved.searchTimeoutMs })
   const runtime = new GhIssueRuntime(
     ctx,
     resolved,

@@ -49,15 +49,18 @@ export declare class GhIssueRuntime extends TypertRemoteService {
     /** Persist one settings field and return the resolved section. */
     updateSettings(update: GhIssueSettingsUpdate): Promise<GhIssueSettings>;
     /**
-     * Search the addressed agent's repository for issues and pull requests
-     * through the gh CLI.
+     * Search one page of the addressed agent's repository for issues and pull
+     * requests through the gh CLI. The popup loads page 1 on open and fetches
+     * the next page as the list scrolls toward the bottom.
      * @param query - the typed query ('' lists recent items).
+     * @param page - the 1-based page of the result set.
      * @param agent - the live agent resolved from the `agentId` wire field; its
      *   session header owns the workspace cwd.
      * @param signal - caller lifetime; the provider races it.
-     * @returns the bounded entry list and the resolved repository identity.
+     * @returns one bounded page and the resolved repository identity; `truncated`
+     *   reports whether a fuller page exists (the sentinel for the next page).
      */
-    search(query: string, agent: Agent, signal: AbortSignal): Promise<GitHubSearchResult>;
+    search(query: string, page: number, agent: Agent, signal: AbortSignal): Promise<GitHubSearchResult>;
     /** Resolve the repository identity through the workspace git remote. */
     resolveRepo(cwd: string, override: string, signal: AbortSignal): Promise<GitHubRepoRef | undefined>;
     /** The gh account-connection status for the settings page (no token material). */

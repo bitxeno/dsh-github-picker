@@ -37,7 +37,6 @@ export const cssText = `
   font-size: 13px;
   line-height: 20px;
 }
-.dsh_atGh_input,
 .dsh_atGh_select {
   box-sizing: border-box;
   width: 100%;
@@ -53,11 +52,9 @@ export const cssText = `
   font-size: 13px;
   line-height: 20px;
 }
-.dsh_atGh_input:focus,
 .dsh_atGh_select:focus {
   border-color: var(--dsw-alias-brand-primary);
 }
-.dsh_atGh_input:disabled,
 .dsh_atGh_select:disabled {
   opacity: 0.55;
 }

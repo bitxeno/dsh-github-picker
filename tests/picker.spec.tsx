@@ -22,8 +22,8 @@ function entry(number: number, over: Partial<Parameters<typeof pickText>[0]> = {
   }
 }
 
-function result(entries: Parameters<typeof pickText>[0][] = [entry(1)]): GitHubSearchResult {
-  return { entries, repo, source: 'gh', truncated: false }
+function result(entries: Parameters<typeof pickText>[0][] = [entry(1)], truncated = false): GitHubSearchResult {
+  return { entries, repo, source: 'gh', truncated }
 }
 
 /** A locale stub that renders the key itself (asserts the key, not the copy). */
@@ -31,7 +31,7 @@ const t = (key: string): string => key
 
 /** The component harness: live settings holder + search/setDraft spies. */
 function harness(over: Partial<Record<string, unknown>> = {}) {
-  const settings: GhIssueSettings = { insertFormat: 'ref', defaultLimit: 20 }
+  const settings: GhIssueSettings = { insertFormat: 'ref' }
   const search = vi.fn()
   const setDraft = vi.fn()
   const props = {
@@ -84,6 +84,19 @@ const searchInput = (): HTMLInputElement => {
 
 const rowButtons = (): HTMLButtonElement[] => [...container.querySelectorAll('button')].slice(1)
 
+/** Scroll the list to the bottom (jsdom needs fake scroll metrics). */
+async function scrollList(): Promise<HTMLDivElement | undefined> {
+  const list = rowButtons()[0]?.parentElement
+  if (list === undefined) throw new Error('no list rendered')
+  Object.defineProperties(list, {
+    scrollTop: { value: 500, configurable: true },
+    clientHeight: { value: 100, configurable: true },
+    scrollHeight: { value: 620, configurable: true },
+  })
+  await act(async () => { list.dispatchEvent(new Event('scroll', { bubbles: false })) })
+  return list
+}
+
 /** Drive the React-controlled search input like a keystroke would. */
 async function typeQuery(value: string): Promise<void> {
   await act(async () => {
@@ -95,11 +108,11 @@ async function typeQuery(value: string): Promise<void> {
 
 describe('pickText', () => {
   it('inserts the @owner/repo#number form by default', () => {
-    expect(pickText(entry(125), repo, { insertFormat: 'ref', defaultLimit: 20 })).toBe('@bitxeno/atvloadly#125 ')
+    expect(pickText(entry(125), repo, { insertFormat: 'ref' })).toBe('@bitxeno/atvloadly#125 ')
   })
 
   it('inserts the GitHub URL when configured', () => {
-    expect(pickText(entry(125), repo, { insertFormat: 'url', defaultLimit: 20 })).toBe('https://github.com/bitxeno/atvloadly/issues/125 ')
+    expect(pickText(entry(125), repo, { insertFormat: 'url' })).toBe('https://github.com/bitxeno/atvloadly/issues/125 ')
   })
 })
 
@@ -139,7 +152,7 @@ describe('opening the popup', () => {
     search.mockImplementation(() => new Promise((resolve) => { resolveSearch = resolve }))
     await render(props)
     await act(async () => { openButton().click() })
-    expect(search).toHaveBeenCalledWith('', 's1', expect.any(AbortSignal))
+    expect(search).toHaveBeenCalledWith('', 1, 's1', expect.any(AbortSignal))
     expect(container.textContent).toContain('picker.loading')
     await act(async () => { resolveSearch(result()) })
     expect(container.querySelectorAll('button').length).toBe(2) // trigger + one row
@@ -197,13 +210,118 @@ describe('searching and picking', () => {
     expect(container.textContent).toContain('picker.empty')
   })
 
-  it('caps the visible rows at the configured result limit', async () => {
+  it('shows every loaded entry, however many pages it took', async () => {
     const many = Array.from({ length: 30 }, (_, index) => entry(index + 1))
-    const { props, search, settings } = harness()
+    const { props, search } = harness()
     search.mockResolvedValue(result(many))
     await render(props)
     await act(async () => { openButton().click() })
-    expect(container.querySelectorAll('button').length).toBe(settings.defaultLimit + 1)
+    expect(container.querySelectorAll('button').length).toBe(many.length + 1)
+  })
+
+  it('does not page while the scroll is still far from the bottom', async () => {
+    const firstPage = Array.from({ length: 12 }, (_, index) => entry(index + 1))
+    const { props, search } = harness()
+    search.mockResolvedValue(result(firstPage, true))
+    await render(props)
+    await act(async () => { openButton().click() })
+    const list = rowButtons()[0]?.parentElement
+    if (list === undefined) throw new Error('no list rendered')
+    Object.defineProperties(list, {
+      scrollTop: { value: 0, configurable: true },
+      clientHeight: { value: 100, configurable: true },
+      scrollHeight: { value: 620, configurable: true },
+    })
+    await act(async () => { list.dispatchEvent(new Event('scroll', { bubbles: false })) })
+    expect(search).toHaveBeenCalledTimes(1)
+  })
+
+  it('swallows a non-aborted page rejection', async () => {
+    const firstPage = Array.from({ length: 12 }, (_, index) => entry(index + 1))
+    let rejectPage2!: (reason?: unknown) => void
+    const { props, search } = harness()
+    search
+      .mockImplementationOnce(async () => result(firstPage, true))
+      .mockImplementationOnce(() => new Promise<GitHubSearchResult>((resolve, reject) => { rejectPage2 = reject }))
+    await render(props)
+    await act(async () => { openButton().click() })
+    await scrollList()
+    await act(async () => { rejectPage2(new Error('boom')) })
+    expect(search).toHaveBeenCalledTimes(2)
+    expect(container.querySelectorAll('button').length).toBe(13)
+  })
+
+  it('loads the next page when the list scrolls to the bottom', async () => {
+    const firstPage = Array.from({ length: 12 }, (_, index) => entry(index + 1))
+    const { props, search } = harness()
+    search
+      .mockImplementationOnce(async () => result(firstPage, true))
+      .mockImplementationOnce(async () => result([entry(13), entry(14)], false))
+    await render(props)
+    await act(async () => { openButton().click() })
+    expect(search).toHaveBeenCalledWith('', 1, 's1', expect.any(AbortSignal))
+    expect(container.querySelectorAll('button').length).toBe(13)
+    await scrollList()
+    expect(search).toHaveBeenCalledWith('', 2, 's1', expect.any(AbortSignal))
+    expect(container.querySelectorAll('button').length).toBe(15)
+    expect(rowButtons().at(-1)?.textContent).toContain('14')
+  })
+
+  it('does not page a result set that is not truncated', async () => {
+    const { props, search } = harness()
+    search.mockResolvedValue(result(Array.from({ length: 12 }, (_, index) => entry(index + 1)), false))
+    await render(props)
+    await act(async () => { openButton().click() })
+    await scrollList()
+    expect(search).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not start a page fetch while one is already in flight', async () => {
+    const firstPage = Array.from({ length: 12 }, (_, index) => entry(index + 1))
+    let resolvePage2!: (value: GitHubSearchResult) => void
+    const { props, search } = harness()
+    search
+      .mockImplementationOnce(async () => result(firstPage, true))
+      .mockImplementationOnce(() => new Promise<GitHubSearchResult>(resolve => { resolvePage2 = resolve }))
+    await render(props)
+    await act(async () => { openButton().click() })
+    await scrollList()
+    await scrollList()
+    expect(search).toHaveBeenCalledTimes(2)
+    await act(async () => { resolvePage2(result([entry(13)], false)) })
+    expect(container.querySelectorAll('button').length).toBe(14)
+  })
+
+  it('yields a page load once the popup closes mid-fetch', async () => {
+    const firstPage = Array.from({ length: 12 }, (_, index) => entry(index + 1))
+    let resolvePage2!: (value: GitHubSearchResult) => void
+    const { props, search } = harness()
+    search
+      .mockImplementationOnce(async () => result(firstPage, true))
+      .mockImplementationOnce(() => new Promise<GitHubSearchResult>(resolve => { resolvePage2 = resolve }))
+    await render(props)
+    await act(async () => { openButton().click() })
+    await scrollList()
+    await act(async () => { openButton().click() })
+    expect(search).toHaveBeenCalledTimes(2)
+    await act(async () => { resolvePage2(result([entry(13)], false)) })
+    expect(search).toHaveBeenCalledTimes(2)
+  })
+
+  it('swallows an aborted page rejection after the popup closes', async () => {
+    const firstPage = Array.from({ length: 12 }, (_, index) => entry(index + 1))
+    let rejectPage2!: (reason?: unknown) => void
+    const { props, search } = harness()
+    search
+      .mockImplementationOnce(async () => result(firstPage, true))
+      .mockImplementationOnce(() => new Promise<GitHubSearchResult>((resolve, reject) => { rejectPage2 = reject }))
+    await render(props)
+    await act(async () => { openButton().click() })
+    await scrollList()
+    await act(async () => { openButton().click() })
+    expect(search).toHaveBeenCalledTimes(2)
+    await act(async () => { rejectPage2(new DOMException('Aborted', 'AbortError')) })
+    expect(search).toHaveBeenCalledTimes(2)
   })
 
   it('highlights a row on hover and resets it on leave', async () => {
@@ -245,7 +363,7 @@ describe('searching and picking', () => {
   it('picks the URL format when configured', async () => {
     const { props, search, setDraft } = harness()
     search.mockResolvedValue(result([entry(7, { kind: 'pr', url: 'https://github.com/bitxeno/atvloadly/pull/7' })]))
-    await render({ ...props, useSettings: (selector: (s: GhIssueSettings) => unknown) => selector({ insertFormat: 'url', defaultLimit: 20 }) })
+    await render({ ...props, useSettings: (selector: (s: GhIssueSettings) => unknown) => selector({ insertFormat: 'url' }) })
     await act(async () => { openButton().click() })
     await act(async () => { rowButtons()[0]?.click() })
     expect(setDraft).toHaveBeenCalledWith('hello https://github.com/bitxeno/atvloadly/pull/7 ')

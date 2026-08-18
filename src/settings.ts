@@ -18,7 +18,6 @@ export const GH_ISSUE_NAMESPACE = settingsNamespace('github-picker')
 /** Schemastery schema of the `github-picker` namespace section. */
 export const GhIssueSettingsSchema: z<GhIssueSettings> = z.object({
   insertFormat: z.union(['url', 'ref'] as const).default('ref'),
-  defaultLimit: z.natural().min(1).default(20),
 })
 
 /**

@@ -35,8 +35,8 @@ export declare function searchError(kind: GhSearchErrorKind, message: string): G
 /** Options for one gh provider search. */
 export interface GhSearchOptions {
     readonly command?: GhCommand;
-    /** Hard cap on entries per search; a function is read live per call. */
-    readonly limit: number | (() => number);
+    /** Entries per search page. */
+    readonly perPage: number;
     readonly timeoutMs: number;
 }
 /** The gh CLI search provider. */
@@ -49,12 +49,13 @@ export declare class GhProvider implements SearchProvider {
      */
     constructor(options: GhSearchOptions);
     /**
-     * Search one repository through the gh CLI.
+     * Search one repository page through the gh CLI.
      * @param repo - the resolved repository identity.
      * @param query - the typed # query ('' lists recently updated).
+     * @param page - the 1-based page of the result set.
      * @param signal - caller lifetime.
-     * @returns the bounded, projected entries.
+     * @returns the bounded page entries.
      */
-    search(repo: GitHubRepoRef, query: string, signal: AbortSignal): Promise<GitHubEntry[]>;
+    search(repo: GitHubRepoRef, query: string, page: number, signal: AbortSignal): Promise<GitHubEntry[]>;
 }
 export {};

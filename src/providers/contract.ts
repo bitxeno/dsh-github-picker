@@ -10,11 +10,12 @@ export interface SearchProvider {
   /** The wire source label this provider reports. */
   readonly source: 'gh'
   /**
-   * Search one repository.
+   * Search one repository page.
    * @param repo - the resolved repository identity.
    * @param query - the typed @ query ('' lists recently updated).
+   * @param page - the 1-based page of the result set (PICKER_PAGE_SIZE per page).
    * @param signal - caller lifetime.
-   * @returns the bounded entry list (already provider-sorted).
+   * @returns the bounded page entries (already provider-sorted).
    */
-  search(repo: GitHubRepoRef, query: string, signal: AbortSignal): Promise<GitHubEntry[]>
+  search(repo: GitHubRepoRef, query: string, page: number, signal: AbortSignal): Promise<GitHubEntry[]>
 }

@@ -11,6 +11,9 @@
 import { z } from 'zod'
 import type { InvocationDescriptor } from '@deepseek-ai/dsh-typert-protocol'
 
+/** Entries per search page (the popup loads more as the list scrolls). */
+export const PICKER_PAGE_SIZE = 12
+
 /** One searchable GitHub issue or pull request entry. */
 export interface GitHubEntry {
   readonly number: number
@@ -45,14 +48,11 @@ export interface GitHubSearchResult {
 export interface GhIssueSettings {
   /** Inserted reference format: the @owner/repo#number form (default) or the plain GitHub URL. */
   readonly insertFormat: 'url' | 'ref'
-  /** Hard cap on entries per search round-trip. */
-  readonly defaultLimit: number
 }
 
 /** One field update sent through the plugin-owned settings Remote. */
 export type GhIssueSettingsUpdate =
   | { readonly field: 'insertFormat'; readonly value: 'url' | 'ref' }
-  | { readonly field: 'defaultLimit'; readonly value: number }
 
 /** One logged-in gh account (connection facts only; tokens never cross the wire). */
 export interface GhAuthAccount {
@@ -102,13 +102,11 @@ export const gitHubSearchResultSchema = z.object({
 /** Wire codec: the resolved github-picker settings section. */
 export const ghIssueSettingsSchema = z.object({
   insertFormat: z.enum(['url', 'ref']),
-  defaultLimit: z.number().int().min(1),
 }).readonly()
 
 /** Wire codec: one field update. */
 export const ghIssueSettingsUpdateSchema = z.discriminatedUnion('field', [
   z.object({ field: z.literal('insertFormat'), value: z.enum(['url', 'ref']) }).readonly(),
-  z.object({ field: z.literal('defaultLimit'), value: z.number().int().min(1) }).readonly(),
 ])
 
 /** Wire codec: one logged-in gh account. */
@@ -139,6 +137,12 @@ export const GH_ISSUE_INVOCATIONS: readonly InvocationDescriptor[] = [
         wire: 'query',
         source: 'json',
         codec: { mode: 'strict', typeSymbol: 'string', schema: z.string() },
+      },
+      {
+        name: 'page',
+        wire: 'page',
+        source: 'json',
+        codec: { mode: 'strict', typeSymbol: 'number', schema: z.number().int().min(1) },
       },
       {
         name: 'agent',

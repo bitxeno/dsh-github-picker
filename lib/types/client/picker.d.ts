@@ -10,8 +10,8 @@ export interface PickerInjected {
     hooks: {
         settings: ObservableSnapshot<GhIssueSettings>;
     };
-    /** The Remote-backed search seam (per-session cache, host-owned data). */
-    search(query: string, sessionId: SessionId, signal: AbortSignal): Promise<GitHubSearchResult>;
+    /** The Remote-backed search seam (per-session, per-page cache, host-owned data). */
+    search(query: string, page: number, sessionId: SessionId, signal: AbortSignal): Promise<GitHubSearchResult>;
 }
 /** Full component props: owner InputZone + session kit + injected face + locale seat. */
 export type PickerProps = PropsRuntime<'conversation.input.right'> & InjectFace<PickerInjected> & PropsLocale<typeof NS>;

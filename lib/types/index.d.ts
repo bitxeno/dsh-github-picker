@@ -23,8 +23,8 @@ export interface Config extends ConfigInput {
  * Configuration schema: deployment-varying bounds stay tunable from
  * the profile patch. The inferred schema type keeps the callable form accepting
  * partial input, so `Config({})` yields the defaults (what the Loader does
- * for Loader compositions). The search-result cap (`defaultLimit`) is not
- * part of the deployed config — it lives in the durable settings page.
+ * for Loader compositions). The search result cap is fixed — the popup pages
+ * through every result the provider returns (12 per page).
  */
 export declare const Config: z<Schemastery.ObjectS<{
     searchTimeoutMs: z<number, number>;

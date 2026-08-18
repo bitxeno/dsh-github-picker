@@ -16,33 +16,33 @@ describe('rankEntries', () => {
   ]
 
   it('keeps provider order for the empty query', () => {
-    expect(rankEntries(entries, '', 10).map(e => e.number)).toEqual([123, 1234, 12, 99])
+    expect(rankEntries(entries, '').map(e => e.number)).toEqual([123, 1234, 12, 99])
   })
 
   it('ranks the exact number first', () => {
-    expect(rankEntries(entries, '123', 10).map(e => e.number)).toEqual([123, 1234])
+    expect(rankEntries(entries, '123').map(e => e.number)).toEqual([123, 1234])
   })
 
   it('ranks number prefixes before title matches', () => {
-    expect(rankEntries(entries, '12', 10).map(e => e.number)).toEqual([12, 123, 1234])
+    expect(rankEntries(entries, '12').map(e => e.number)).toEqual([12, 123, 1234])
   })
 
   it('matches titles for non-numeric queries', () => {
-    expect(rankEntries(entries, 'login', 10).map(e => e.number)).toEqual([1234, 123])
+    expect(rankEntries(entries, 'login').map(e => e.number)).toEqual([1234, 123])
   })
 
   it('returns nothing for unmatched queries', () => {
-    expect(rankEntries(entries, 'zzz', 10)).toEqual([])
+    expect(rankEntries(entries, 'zzz')).toEqual([])
   })
 
-  it('honors the limit', () => {
-    expect(rankEntries(entries, '', 2)).toHaveLength(2)
-    expect(rankEntries(entries, '1', 2)).toHaveLength(2)
+  it('never caps matches (the popup scrolls through every loaded page)', () => {
+    expect(rankEntries(entries, '')).toHaveLength(entries.length)
+    expect(rankEntries(entries, '1')).toHaveLength(3)
   })
 
   it('falls back to title search when a numeric-looking query is mixed', () => {
     // '12a' is not purely numeric, so it matches titles only.
-    expect(rankEntries(entries, '12a', 10)).toEqual([])
+    expect(rankEntries(entries, '12a')).toEqual([])
   })
 
   it('breaks score ties by number desc then title asc', () => {
@@ -51,19 +51,19 @@ describe('rankEntries', () => {
       entry(5, 'Zeta login'),
       entry(9, 'Zulu login'),
     ]
-    expect(rankEntries(tied, 'login', 10).map(e => e.number)).toEqual([9, 5])
+    expect(rankEntries(tied, 'login').map(e => e.number)).toEqual([9, 5])
     // Equal score and number: title ascending (and its mirror: title
     // descending order would come later in the comparator).
     const sameNumber = [
       entry(3, 'Beta login'),
       entry(3, 'Ceta login'),
     ]
-    expect(rankEntries(sameNumber, 'login', 10).map(e => e.title)).toEqual(['Beta login', 'Ceta login'])
+    expect(rankEntries(sameNumber, 'login').map(e => e.title)).toEqual(['Beta login', 'Ceta login'])
     const reversed = [
       entry(3, 'Delta login'),
       entry(3, 'Celta login'),
     ]
-    expect(rankEntries(reversed, 'login', 10).map(e => e.title)).toEqual(['Celta login', 'Delta login'])
+    expect(rankEntries(reversed, 'login').map(e => e.title)).toEqual(['Celta login', 'Delta login'])
   })
 
   it('ranks the exact title match above contains matches', () => {
@@ -71,17 +71,17 @@ describe('rankEntries', () => {
       entry(1, 'Login'),
       entry(2, 'Login Button'),
     ]
-    expect(rankEntries(exact, 'login', 10).map(e => e.number)).toEqual([1, 2])
+    expect(rankEntries(exact, 'login').map(e => e.number)).toEqual([1, 2])
   })
 
   it('matches titles case-insensitively', () => {
-    expect(rankEntries([entry(1, 'Login Button')], 'login', 10).map(e => e.number)).toEqual([1])
-    expect(rankEntries([entry(1, 'Login Button')], 'LOGIN', 10).map(e => e.number)).toEqual([1])
+    expect(rankEntries([entry(1, 'Login Button')], 'login').map(e => e.number)).toEqual([1])
+    expect(rankEntries([entry(1, 'Login Button')], 'LOGIN').map(e => e.number)).toEqual([1])
   })
 
-  it('caps entries beyond the limit after scoring', () => {
+it('returns every matching entry, however many pages it took', () => {
     const many = Array.from({ length: 30 }, (_, index) => entry(index + 1, `issue ${index + 1}`))
-    expect(rankEntries(many, 'issue', 12)).toHaveLength(12)
+    expect(rankEntries(many, 'issue')).toHaveLength(30)
   })
 })
 

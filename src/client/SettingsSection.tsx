@@ -3,8 +3,9 @@
  * gh CLI account-connection status card. Reads and writes go through the
  * plugin-owned settings snapshot and the Remote updateSettings path — the
  * public DSH package does not expose the github-picker namespace to the browser.
- * There is no enable switch: the picker is always on. All dsh imports are
- * type-only.
+ * There is no enable switch and no result limit: the picker is always on and
+ * the popup scrolls through every page the provider returns. All dsh imports
+ * are type-only.
  */
 import { useEffect, useState } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
@@ -43,13 +44,6 @@ export function GhIssueSection({ useSettings, update, getGhAuthStatus, t }: Sett
   const settings = useSettings(snapshot => snapshot)
   const [auth, setAuth] = useState<AuthCardState>({ phase: 'loading' })
   const [saving, setSaving] = useState(false)
-  // The limit field edits on a local draft and commits on blur/Enter, so a
-  // controlled input never fights the async snapshot update.
-  const [limitDraft, setLimitDraft] = useState(String(settings.defaultLimit))
-  const [limitDirty, setLimitDirty] = useState(false)
-  useEffect(() => {
-    if (!limitDirty) setLimitDraft(String(settings.defaultLimit))
-  }, [settings.defaultLimit, limitDirty])
 
   // Load the gh account-connection status once on mount ("initialization").
   useEffect(() => {
@@ -69,16 +63,6 @@ export function GhIssueSection({ useSettings, update, getGhAuthStatus, t }: Sett
   const setField = (next: GhIssueSettingsUpdate): void => {
     setSaving(true)
     void update(next).finally(() => { setSaving(false) })
-  }
-
-  const commitLimit = (): void => {
-    setLimitDirty(false)
-    const value = Number(limitDraft)
-    if (!Number.isInteger(value) || value < 1 || value > 100 || value === settings.defaultLimit) {
-      setLimitDraft(String(settings.defaultLimit))
-      return
-    }
-    setField({ field: 'defaultLimit', value })
   }
 
   const connected = auth.phase === 'ready'
@@ -121,22 +105,6 @@ export function GhIssueSection({ useSettings, update, getGhAuthStatus, t }: Sett
           <option value="url">{t('settings.insertFormat.url')}</option>
         </select>
         <span>{t('settings.insertFormatDesc')}</span>
-      </div>
-      <div className="dsh_atGh_field">
-        <span>{t('settings.defaultLimit')}</span>
-        <input
-          className="dsh_atGh_input"
-          type="number"
-          min={1}
-          max={100}
-          value={limitDraft}
-          disabled={saving}
-          onFocus={() => { setLimitDirty(true) }}
-          onChange={event => { setLimitDraft(event.target.value) }}
-          onBlur={commitLimit}
-          onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur() }}
-        />
-        <span>{t('settings.defaultLimitDesc')}</span>
       </div>
     </section>
   )

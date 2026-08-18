@@ -43,18 +43,18 @@ export interface PickerInjected {
   hooks: {
     settings: ObservableSnapshot<GhIssueSettings>
   }
-  /** The Remote-backed search seam (per-session cache, host-owned data). */
-  search(query: string, sessionId: SessionId, signal: AbortSignal): Promise<GitHubSearchResult>
+  /** The Remote-backed search seam (per-session, per-page cache, host-owned data). */
+  search(query: string, page: number, sessionId: SessionId, signal: AbortSignal): Promise<GitHubSearchResult>
 }
 
 /** Full component props: owner InputZone + session kit + injected face + locale seat. */
 export type PickerProps = PropsRuntime<'conversation.input.right'> & InjectFace<PickerInjected> & PropsLocale<typeof NS>
 
-/** The popup's load lifecycle. */
+/** The popup's load lifecycle (entries accumulate across pages). */
 type LoadState =
   | { readonly phase: 'idle' }
   | { readonly phase: 'loading' }
-  | { readonly phase: 'ready'; readonly result: GitHubSearchResult; readonly at: number }
+  | { readonly phase: 'ready'; readonly entries: readonly GitHubEntry[]; readonly repo: GitHubRepoRef; readonly page: number; readonly truncated: boolean; readonly at: number }
   | { readonly phase: 'error'; readonly kind: SearchErrorKind }
 
 /** Row height matches the resident chrome (access mode, plan, attach, model). */
@@ -168,8 +168,10 @@ export function GhIssuePickerButton(props: PickerProps): React.ReactElement {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [loadState, setLoadState] = useState<LoadState>({ phase: 'idle' })
+  const [loadingMore, setLoadingMore] = useState(false)
   const boxRef = useRef<HTMLDivElement | null>(null)
   const loadController = useRef<AbortController | undefined>(undefined)
+  const fetchingRef = useRef(false)
 
   const load = useCallback(async () => {
     const sessionId = props.session?.sessionId
@@ -179,13 +181,42 @@ export function GhIssuePickerButton(props: PickerProps): React.ReactElement {
     loadController.current = controller
     setLoadState({ phase: 'loading' })
     try {
-      const result = await search('', sessionId, controller.signal)
-      setLoadState({ phase: 'ready', result, at: Date.now() })
+      const result = await search('', 1, sessionId, controller.signal)
+      setLoadState({ phase: 'ready', entries: result.entries, repo: result.repo, page: 1, truncated: result.truncated, at: Date.now() })
     } catch (error) {
       if (controller.signal.aborted) return
       setLoadState({ phase: 'error', kind: (error as { kind?: SearchErrorKind }).kind ?? 'unknown' })
     }
   }, [search, props.session?.sessionId])
+
+  const loadMore = useCallback(async () => {
+    const sessionId = props.session?.sessionId
+    if (sessionId === undefined || fetchingRef.current) return
+    const state = loadState
+    if (state.phase !== 'ready' || !state.truncated) return
+    fetchingRef.current = true
+    setLoadingMore(true)
+    const controller = new AbortController()
+    loadController.current = controller
+    const nextPage = state.page + 1
+    try {
+      const result = await search('', nextPage, sessionId, controller.signal)
+      if (controller.signal.aborted) return
+      const seen = new Set(state.entries.map((entry) => entry.number))
+      const merged = [...state.entries, ...result.entries.filter((entry) => !seen.has(entry.number))]
+      setLoadState({ phase: 'ready', entries: merged, repo: result.repo, page: nextPage, truncated: result.truncated, at: Date.now() })
+    } catch (error) {
+      if (controller.signal.aborted) return
+    } finally {
+      setLoadingMore(false)
+      fetchingRef.current = false
+    }
+  }, [loadState, search, props.session?.sessionId])
+
+  const handleScroll = (event: React.UIEvent<HTMLDivElement>): void => {
+    const el = event.currentTarget
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 32) void loadMore()
+  }
 
   const close = () => {
     loadController.current?.abort()
@@ -253,7 +284,7 @@ export function GhIssuePickerButton(props: PickerProps): React.ReactElement {
   useEffect(() => () => { loadController.current?.abort() }, [])
 
   const rows = loadState.phase === 'ready'
-    ? rankEntries(loadState.result.entries, query, settings.defaultLimit)
+    ? rankEntries(loadState.entries, query)
     : []
 
   return (
@@ -289,7 +320,7 @@ export function GhIssuePickerButton(props: PickerProps): React.ReactElement {
             </div>
           )}
           {loadState.phase === 'ready' && (
-            <div style={listStyle}>
+            <div onScroll={handleScroll} style={listStyle}>
               {rows.length === 0 ? (
                 <div style={statusStyle}>{t('picker.empty')}</div>
               ) : (
@@ -297,7 +328,7 @@ export function GhIssuePickerButton(props: PickerProps): React.ReactElement {
                   <button
                     key={entry.number}
                     type="button"
-                    onClick={() => pick(entry, loadState.result.repo)}
+                    onClick={() => pick(entry, loadState.repo)}
                     onMouseEnter={(event) => {
                       event.currentTarget.style.background = 'var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.12))'
                     }}
@@ -312,6 +343,7 @@ export function GhIssuePickerButton(props: PickerProps): React.ReactElement {
                   </button>
                 ))
               )}
+              {loadingMore && <div style={statusStyle}>{t('picker.loadingMore')}</div>}
             </div>
           )}
         </div>

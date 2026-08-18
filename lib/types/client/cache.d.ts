@@ -12,7 +12,7 @@ import type { GitHubSearchResult } from '../contract.ts';
 export declare const RESULT_TTL_MS = 30000;
 /** The search seam the wiring layer injects (the Remote wrapper). */
 export interface HashSearch {
-    (query: string, sessionId: SessionId, signal: AbortSignal): Promise<GitHubSearchResult>;
+    (query: string, page: number, sessionId: SessionId, signal: AbortSignal): Promise<GitHubSearchResult>;
 }
 /** The per-session cache controller. */
 export declare class HashCache {
@@ -26,14 +26,17 @@ export declare class HashCache {
     constructor(search: HashSearch, now?: () => number);
     /** Drop every session cache (connection reset / settings change). */
     invalidateAll(): void;
-    /** The settled result for one query, or undefined when cold. */
-    settled(sessionId: SessionId, query: string): GitHubSearchResult | undefined;
+    /** Cache key: the exact query and page (pages accumulate on scroll). */
+    private static key;
+    /** The settled result for one query page, or undefined when cold. */
+    settled(sessionId: SessionId, query: string, page: number): GitHubSearchResult | undefined;
     /**
-     * Resolve one query: serve the hot settled result or fetch once, sharing
-     * the in-flight promise across concurrent callers.
+     * Resolve one query page: serve the hot settled result or fetch once,
+     * sharing the in-flight promise across concurrent callers.
      * @param query - the typed # query.
+     * @param page - the 1-based page of the result set.
      * @param sessionId - the addressed session.
      * @param signal - per-keystroke lifetime (superseded queries yield early).
      */
-    resolve(query: string, sessionId: SessionId, signal: AbortSignal): Promise<GitHubSearchResult>;
+    resolve(query: string, page: number, sessionId: SessionId, signal: AbortSignal): Promise<GitHubSearchResult>;
 }

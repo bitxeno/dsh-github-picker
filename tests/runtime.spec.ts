@@ -43,7 +43,7 @@ function settingsProvider(read: () => GhIssueSettings) {
 
 /** Default settings the tests start from. */
 function defaultSettings(): GhIssueSettings {
-  return { insertFormat: 'ref', defaultLimit: 20 }
+  return { insertFormat: 'ref' }
 }
 
 /** Mount the function-plugin module on a fresh context (harness test pattern). */
@@ -119,9 +119,7 @@ describe('dsh-github-picker host composition', () => {
     const original = service as unknown as GhIssueRuntime
     expect(original.getSettings()).toEqual(defaultSettings())
     await original.updateSettings({ field: 'insertFormat', value: 'url' })
-    expect(original.getSettings().insertFormat).toBe('url')
-    await original.updateSettings({ field: 'defaultLimit', value: 50 })
-    expect(original.getSettings()).toMatchObject({ insertFormat: 'url', defaultLimit: 50 })
+    expect(original.getSettings()).toEqual({ insertFormat: 'url' })
     await fiber.dispose()
   })
 
@@ -139,7 +137,7 @@ describe('dsh-github-picker host composition', () => {
     const { fiber, service } = await mount(ctx)
     const original = service as unknown as GhIssueRuntime
     const signal = new AbortController().signal
-    await expect(original.search('bug', agentWith(undefined), signal)).rejects.toThrow(/no workspace directory/)
+    await expect(original.search('bug', 1, agentWith(undefined), signal)).rejects.toThrow(/no workspace directory/)
     await fiber.dispose()
   })
 
@@ -156,7 +154,7 @@ describe('dsh-github-picker host composition', () => {
     const { fiber, service } = await mount(ctx)
     const original = service as unknown as GhIssueRuntime
     const signal = new AbortController().signal
-    await expect(original.search('bug', agentWith('/tmp'), signal)).rejects.toThrow(/no GitHub repository detected/)
+    await expect(original.search('bug', 1, agentWith('/tmp'), signal)).rejects.toThrow(/no GitHub repository detected/)
     execMock.mockReset()
     await fiber.dispose()
   })
@@ -175,7 +173,7 @@ describe('dsh-github-picker host composition', () => {
     const { fiber, service } = await mount(ctx)
     const original = service as unknown as GhIssueRuntime
     const signal = new AbortController().signal
-    const result = await original.search('fix', agentWith('/tmp'), signal)
+    const result = await original.search('fix', 1, agentWith('/tmp'), signal)
     expect(result.repo).toEqual({ owner: 'o', name: 'r' })
     expect(result.source).toBe('gh')
     expect(result.truncated).toBe(false)
@@ -188,22 +186,29 @@ describe('dsh-github-picker host composition', () => {
     await fiber.dispose()
   })
 
-  it('caps and flags truncation by the live settings limit', async () => {
-    execMock.mockImplementation((file, _args, _options, callback) => {
+  it('flags truncation when a full page returns and pages forward', async () => {
+    const many = Array.from({ length: 12 }, (_, index) => ghItem(index + 1, `item ${index + 1}`))
+    execMock.mockImplementation((file, args, _options, callback) => {
       if (file === 'git') {
         callback(null, 'https://github.com/o/r.git\n')
         return
       }
-      callback(null, [ghItem(42, 'first'), ghItem(7, 'second'), ghItem(9, 'third')].join('\n'))
+      if (args.includes('page=2')) {
+        callback(null, [ghItem(13, 'thirteen')].join('\n'))
+        return
+      }
+      callback(null, many.join('\n'))
     })
     const ctx = new Context()
-    const readSettings = (): GhIssueSettings => ({ insertFormat: 'ref', defaultLimit: 2 })
-    const { fiber, service } = await mount(ctx, undefined, readSettings)
+    const { fiber, service } = await mount(ctx)
     const original = service as unknown as GhIssueRuntime
     const signal = new AbortController().signal
-    const result = await original.search('fix', agentWith('/tmp'), signal)
-    expect(result.entries).toHaveLength(2)
-    expect(result.truncated).toBe(true)
+    const page1 = await original.search('', 1, agentWith('/tmp'), signal)
+    expect(page1.entries).toHaveLength(12)
+    expect(page1.truncated).toBe(true)
+    const page2 = await original.search('', 2, agentWith('/tmp'), signal)
+    expect(page2.entries).toHaveLength(1)
+    expect(page2.truncated).toBe(false)
     execMock.mockReset()
     await fiber.dispose()
   })
@@ -220,7 +225,7 @@ describe('dsh-github-picker host composition', () => {
     const { fiber, service } = await mount(ctx)
     const original = service as unknown as GhIssueRuntime
     const signal = new AbortController().signal
-    const error = await original.search('fix', agentWith('/tmp'), signal).then(
+    const error = await original.search('fix', 1, agentWith('/tmp'), signal).then(
       () => null,
       (caught: unknown) => caught,
     )
