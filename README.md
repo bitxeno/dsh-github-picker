@@ -1,78 +1,64 @@
 # dsh-github-picker
 
 <div align="center">
-  
+
 English | [简体中文](README.zh.md)
 
 </div>
 
-GitHub issue and pull request references for the DeepSeek Harness web GUI. Click the GitHub icon at the bottom-right of the input box (the composer's tool row, next to the send button) to open a searchable list of the current workspace repository's issues and pull requests, and insert a reference — a GitHub URL, or an `@owner/repo#number` mention.
+GitHub issue and pull request references for the DeepSeek Harness web GUI. Click the GitHub icon next to the send button to search the current workspace repository's issues and PRs, and insert a reference — a GitHub URL or an `@owner/repo#number` mention.
 
 ![dsh-github-picker in the DeepSeek Harness web GUI](docs/image/preview.jpeg)
 
-
-## Install or Update
+## Install
 
 ```sh
 dsh plugin --profile web add dsh-github-picker
 ```
 
-Use the same command to update an existing installation — it installs the latest published version, so no version tracking is needed. Restart `dsh web` after installation so the Host and browser client load the new version.
-
-To pin a specific release, append the version, e.g. `dsh plugin --profile web add dsh-github-picker@0.3.0`.
-
-The npm package ships the committed `lib/` bundles (see `files` in `package.json`); no build happens on install.
+The same command updates an existing installation to the latest published version; append `@<version>` to pin one. Restart `dsh web` after installing.
 
 ## Usage
 
-Click the GitHub icon at the bottom-right of the input box. A searchable popup opens with the repository's recent issues and pull requests; keep typing in its search field to filter by number or title (a number prefix ranks first, like GitHub's own autocomplete). Click a row (or press Enter with the field focused and a row picked via click) to insert the reference; Escape or a click anywhere outside closes the popup. A search failure (gh CLI missing, not authenticated, rate limited, network error, unresolved repository) renders as one localized hint row instead of a silent close.
+Click the GitHub icon in the composer's tool row. The popup lists the repository's recent issues and PRs — 12 per page, loading the next page as you scroll to the bottom, no result cap — filtered locally as you type by number or title (a number prefix ranks first). Click a row to insert the reference; Escape or a click outside closes the popup. A search failure (gh CLI missing, not authenticated, rate limited, network error, unresolved repository) renders as one localized hint row instead of a silent close.
 
-Each row shows GitHub's own state icon, the title, and the `#number` tag:
+Each row shows GitHub's state icon, the title, and the `#number` tag:
 
-| State | Icon | Color |
-| --- | --- | --- |
-| Open issue | `issue-opened` | green |
-| Closed issue | `issue-closed` (check) | purple |
-| Open PR | `git-pull-request` | green |
-| Draft PR | `git-pull-request-draft` | gray |
-| Closed, unmerged PR | `git-pull-request-closed` (×) | red |
-| Merged PR | `git-merge` | purple |
+| State | Icon |
+| --- | --- |
+| Open issue | `issue-opened` (green) |
+| Closed issue | `issue-closed` (purple) |
+| Open PR | `git-pull-request` (green) |
+| Draft PR | `git-pull-request-draft` (gray) |
+| Closed, unmerged PR | `git-pull-request-closed` (red) |
+| Merged PR | `git-merge` (purple) |
 
-Picking inserts one of two texts, chosen in Settings (**Insert format**):
+Picking inserts the text chosen as **insert format** in Settings:
 
 ```text
-@owner/name#125                                 # format: ref (default)
-https://github.com/owner/name/issues/125        # format: url
+@owner/name#125                                 # ref (default)
+https://github.com/owner/name/issues/125        # url
 ```
 
-Before the agent starts a step, the Host scans the draft for GitHub references — URLs, `@owner/repo#number` forms, and bare `#number` tokens — and adds a short reference message for each:
+Before each step, the Host scans the draft for GitHub references — URLs, `@owner/repo#number`, and bare `#number` — and adds a short message per match:
 
 ```xml
 <github-reference repo="owner/name" number="125" />
 ```
 
-The plugin passes the repository and number only — it never fetches issue bodies. The agent can inspect a reference with its available tools when the task requires it.
+Only the repository and number are passed; issue bodies are never fetched.
 
 ## Data Source
 
-The plugin uses the **gh CLI** exclusively — reuse the local `gh` login and call `gh api search/issues`, which returns issues and pull requests in one query. No device flow, OAuth app, or stored credential is involved; the settings page shows the gh connection status (which accounts `gh auth status` reports). `gh` CLI works on macOS, Linux, and Windows.
-
-The repository is always resolved from the workspace `git remote get-url origin` (https, ssh, and `git@` forms); without a resolvable repository the popup shows a hint row explaining how to add a remote.
+The **gh CLI** only: it reuses the local `gh` login and calls `gh api search/issues` (issues and PRs in one query). No device flow, OAuth app, or stored credential. The repository is resolved from the workspace's `git remote get-url origin` (https, ssh, `git@` forms); without a resolvable remote, the popup shows a hint row on adding one.
 
 ## Settings
 
-Open **Settings -> GitHub 引用** to configure:
-
-- **Connection card** — the gh CLI connection status: a GitHub-marked card showing "GitHub **via gh CLI**" with a **Connected** (green) or **Not connected** pill.
-- **Insert format** — `@owner/repo#number` (default) or `GitHub URL` for the picked text.
-
-The list loads 12 entries per page and fetches the next page as you scroll to the bottom, through the end of the result set — there is no result cap.
-
-There is no enable switch: the picker is always available in the composer.
+The plugin card — titled "GitHub 引用" (or "GitHub Picker" in English) — lives in the official configurable-plugins tab. It shows the gh connection status (which accounts `gh auth status` reports) and the **insert format** (`@owner/repo#number` or `GitHub URL`). That is the only setting: there is no enable switch — the picker is always on — and no result limit.
 
 ## Configuration
 
-Host plugin configuration goes into the selected profile's `cordis.patch.yml`:
+Host options go into the selected profile's `cordis.patch.yml`:
 
 ```yaml
 - id: dsh-github-picker
@@ -84,17 +70,7 @@ Host plugin configuration goes into the selected profile's `cordis.patch.yml`:
 - `searchTimeoutMs` bounds provider calls (default 15000).
 - `repoCacheTtl` caches the resolved repository per workspace (default 30000 ms).
 
-The per-search result cap is a durable setting managed from **Settings -> GitHub 引用** (no Host restart needed to change it).
-
-A Host config change needs a `dsh web` restart; a pure client change only needs a browser refresh.
-
-## Notes
-
-- The picker is a component in the framework's `conversation.input.right` composer slot (the seat just before the send button), the same seam the reference dsh-skill-picker uses: an icon button whose popup is a plain sibling positioned `absolute; bottom: calc(100% + 8px); right: 0` inside a relative wrapper. No custom trigger, overlay, or keyboard capture exists.
-- Picking writes the full next draft through the framework input machine (`inputActions.setDraft`), so undo history and the Host's mention scanning work automatically.
-- The popup loads the recent issue/PR list page by page (12 per page) and fetches the next page as you scroll to the bottom, through the end of the result set — there is no result cap (cached per session for 30 seconds; reopening is instant within the TTL and refetches after it), then filters locally per keystroke, so typing never stacks provider calls.
-- The `#number` / URL / `@owner/repo#number` mention grammar is shared by the Host's pre-step scanner (`scanMentions`) and the picker's inserted text; keep them in sync when changing either.
-- A search failure is classified and rendered in the popup as one localized hint row (see the `picker.error.*` copy in `src/client/locales.ts`), so "gh is not installed" is visible instead of a silent close.
+A Host config change needs a `dsh web` restart; a client-only change just needs a browser refresh.
 
 ## Development
 
@@ -103,24 +79,7 @@ pnpm install
 pnpm run check
 ```
 
-The check ladder is typecheck + tests + build with 100% coverage per source file. Dev dependencies are `link:` entries into the installed harness packages (see `AGENTS.md`); built files under `lib/` are committed so profile installation runs without a build.
-
-To install a local checkout instead (development builds or unreleased changes), add the package to `~/.dsh/profiles/web/package.json`:
-
-```json
-{
-  "dependencies": {
-    "dsh-github-picker": "file:/path/to/dsh-github-picker"
-  },
-  "dsh": {
-    "profile": {
-      "bundles": ["...", "dsh-github-picker"]
-    }
-  }
-}
-```
-
-Then `pnpm install` inside the profile and restart `dsh web`. Refresh the browser page. The plugin serves at `/plugins/dsh-github-picker/client.js` and the gateway routes `/api/githubPicker/*`. The client bundle is read per request, so a pure client change only needs a refresh; a Host contract change needs the `dsh web` restart.
+The check ladder is typecheck + tests + build with 100% coverage per source file; `lib/` is committed, so profile installs run without a build. For a local checkout, add the package to `~/.dsh/profiles/web/package.json` (dependency + `dsh.profile.bundles`), `pnpm install`, restart `dsh web`. The plugin serves at `/plugins/dsh-github-picker/client.js`, the gateway routes `/api/githubPicker/*`.
 
 ## License
 
