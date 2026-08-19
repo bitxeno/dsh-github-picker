@@ -8,6 +8,17 @@
     "type": "git",
     "url": "https://github.com/bitxeno/dsh-github-picker.git"
   },
+  "changelog": {
+    "types": {
+      "docs": false,
+      "ci": false,
+      "examples": false,
+      "test": false,
+      "style": false,
+      "build": false,
+      "types": false
+    }
+  },
   "main": "lib/index.js",
   "exports": {
     ".": {
