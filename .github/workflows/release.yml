@@ -41,13 +41,18 @@ jobs:
 
       # The release notes come from changelogen (conventional commits since
       # the last tag; docs/ci commits are omitted via the package.json
-      # `changelog.types` config). The run happens BEFORE the tag exists so the
-      # from-range still ends at the last release tag; the new version only
-      # styles the heading (`-r`).
+      # `changelog.types` config). changelogen's own `## vX.Y.Z` heading and
+      # compare link are stripped — `--generate-notes` already renders the
+      # version title and the Full Changelog link. The run happens BEFORE the
+      # tag exists so the from-range still ends at the last release tag.
       - name: Generate the release notes with changelogen
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           npx --yes changelogen@0.6.2 -r "$VERSION" 2>/dev/null > "$RUNNER_TEMP/release-notes.md"
+          # Keep from the first `###` section on, dropping the heading and
+          # compare-changes preamble changelogen always emits.
+          awk '/^### /{f=1} f' "$RUNNER_TEMP/release-notes.md" > "$RUNNER_TEMP/release-notes.tmp"
+          mv "$RUNNER_TEMP/release-notes.tmp" "$RUNNER_TEMP/release-notes.md"
 
       # Pushing a tree that still carries the old version (e.g. a feature
       # commit touching package.json) must not re-release: an existing tag
