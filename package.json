@@ -8,15 +8,6 @@
     "type": "git",
     "url": "https://github.com/bitxeno/dsh-github-picker.git"
   },
-  "changelogithub": {
-    "types": {
-      "feat": { "title": "🚀 Enhancements" },
-      "fix": { "title": "🩹 Fixes" },
-      "perf": { "title": "🔥 Performance" },
-      "refactor": { "title": "💅 Refactors" },
-      "chore": { "title": "🏡 Chore" }
-    }
-  },
   "main": "lib/index.js",
   "exports": {
     ".": {
