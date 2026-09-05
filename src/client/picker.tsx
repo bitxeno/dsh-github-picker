@@ -25,8 +25,7 @@ import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-cli
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
 import type { GitHubEntry, GitHubRepoRef, GitHubSearchResult, GhPickerSettings } from '../contract.ts'
-import type { SearchErrorKind } from './search.ts'
-import { rankEntries } from './search.ts'
+import { rankEntries, filterByState, STATE_FILTERS, type SearchErrorKind, type StateFilter } from './search.ts'
 import { AlertIcon, GitHubMarkIcon, ghIcon } from './icons.tsx'
 import type { NS, GhPickerKey } from './locales.ts'
 import { RESULT_TTL_MS } from './cache.ts'
@@ -40,6 +39,29 @@ export const ERROR_HINT_KEY: Record<SearchErrorKind, GhPickerKey> = {
   'repo-not-found': 'picker.error.repo-not-found',
   'network': 'picker.error.network',
   'unknown': 'picker.error.unknown',
+}
+
+/** localStorage key keeping the state filter across page reloads. */
+const STATE_FILTER_STORAGE_KEY = 'github-picker:state-filter'
+
+/** The last chosen state filter, or 'all' when nothing (valid) was stored. */
+const loadStoredStateFilter = (): StateFilter => {
+  try {
+    const stored = localStorage.getItem(STATE_FILTER_STORAGE_KEY)
+    if (stored !== null && (STATE_FILTERS as readonly string[]).includes(stored)) return stored as StateFilter
+  } catch {
+    // Storage unavailable (privacy mode, sandboxed frame) — fall back to 'all'.
+  }
+  return 'all'
+}
+
+/** Persist the state filter; storage failures are silently ignored. */
+const storeStateFilter = (filter: StateFilter): void => {
+  try {
+    localStorage.setItem(STATE_FILTER_STORAGE_KEY, filter)
+  } catch {
+    // Storage unavailable — the filter just stays session-local.
+  }
 }
 
 /** The injected business face (the reserved hooks compartment binds `useSettings`). */
@@ -94,17 +116,58 @@ const popoverStyle = {
   zIndex: 1000,
 } as const
 
+const searchRowStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0',
+  margin: '8px',
+} as const
+
 const searchStyle = {
   boxSizing: 'border-box',
-  width: 'calc(100% - 16px)',
-  margin: '8px',
-  padding: '6px 10px',
+  width: '100%',
+  minWidth: '0',
+  height: '30px',
+  padding: '0 10px',
   border: '1px solid var(--dsw-alias-border-l1, rgba(128,128,128,0.3))',
-  borderRadius: '8px',
+  borderRadius: '8px 0 0 8px',
   background: 'var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.1))',
   color: 'var(--dsw-alias-label-primary, #e6ebf2)',
   fontSize: '13px',
   outline: 'none',
+} as const
+
+const clearButtonStyle = {
+  position: 'absolute',
+  top: '50%',
+  right: '6px',
+  transform: 'translateY(-50%)',
+  width: '18px',
+  height: '18px',
+  padding: '0',
+  border: 'none',
+  borderRadius: '50%',
+  background: 'var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.25))',
+  color: 'var(--dsw-alias-label-secondary, rgba(230,235,242,0.6))',
+  fontSize: '12px',
+  lineHeight: '18px',
+  textAlign: 'center',
+  cursor: 'pointer',
+} as const
+
+const filterSelectStyle = {
+  boxSizing: 'border-box',
+  flex: 'none',
+  height: '30px',
+  marginLeft: '-1px',
+  padding: '0 6px',
+  border: '1px solid var(--dsw-alias-border-l1, rgba(128,128,128,0.3))',
+  borderRadius: '0 8px 8px 0',
+  background: 'var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.1))',
+  color: 'var(--dsw-alias-label-primary, #e6ebf2)',
+  fontSize: '12px',
+  outline: 'none',
+  cursor: 'pointer',
 } as const
 
 const listStyle = {
@@ -172,6 +235,7 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
   const input = useInput(snapshot => snapshot)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [stateFilter, setStateFilter] = useState<StateFilter>(loadStoredStateFilter)
   const [loadState, setLoadState] = useState<LoadState>({ phase: 'idle' })
   const [loadingMore, setLoadingMore] = useState(false)
   const boxRef = useRef<HTMLDivElement | null>(null)
@@ -280,7 +344,7 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
   useEffect(() => () => { loadController.current?.abort() }, [])
 
   const rows = loadState.phase === 'ready'
-    ? rankEntries(loadState.entries, query)
+    ? filterByState(rankEntries(loadState.entries, query), stateFilter)
     : []
 
   return (
@@ -299,13 +363,45 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
       </button>
       {open && (
         <div style={popoverStyle}>
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t('picker.search')}
-            style={searchStyle}
-            autoFocus
-          />
+          <div style={searchRowStyle}>
+            <div style={{ position: 'relative', flex: '1 1 auto', minWidth: '0' }}>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={t('picker.search')}
+                style={{ ...searchStyle, paddingRight: query === '' ? '10px' : '26px' }}
+                autoFocus
+              />
+              {query !== '' && (
+                <button
+                  type="button"
+                  data-clear
+                  onClick={() => setQuery('')}
+                  aria-label={t('picker.clear')}
+                  title={t('picker.clear')}
+                  style={clearButtonStyle}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+            <select
+              value={stateFilter}
+              onChange={(event) => {
+                const filter = event.target.value as StateFilter
+                setStateFilter(filter)
+                storeStateFilter(filter)
+              }}
+              aria-label={t('picker.filter')}
+              style={filterSelectStyle}
+            >
+              {STATE_FILTERS.map((filter) => (
+                <option key={filter} value={filter}>
+                  {t(`picker.filter.${filter}` as GhPickerKey)}
+                </option>
+              ))}
+            </select>
+          </div>
           {loadState.phase === 'loading' && (
             <div style={statusStyle}>{t('picker.loading')}</div>
           )}

@@ -1,11 +1,36 @@
 /** Pure ranking for the # picker menu. */
 import { describe, expect, it } from 'vitest'
-import { classifySearchError, rankEntries } from '../src/client/search.ts'
+import { classifySearchError, filterByState, rankEntries, STATE_FILTERS } from '../src/client/search.ts'
 import type { GitHubEntry } from '../src/contract.ts'
 
 function entry(number: number, title: string, kind: 'issue' | 'pr' = 'issue'): GitHubEntry {
   return { number, title, kind, state: 'open', url: `https://github.com/o/r/issues/${number}` }
 }
+
+describe('filterByState', () => {
+  const entries = [
+    { ...entry(1, 'open issue'), state: 'open' as const },
+    { ...entry(2, 'closed issue'), state: 'closed' as const },
+    { ...entry(3, 'open pr', 'pr'), state: 'open' as const },
+  ]
+
+  it('exposes the toggle order all/open/closed', () => {
+    expect(STATE_FILTERS).toEqual(['all', 'open', 'closed'])
+  })
+
+  it('keeps every entry under the all filter', () => {
+    expect(filterByState(entries, 'all').map(e => e.number)).toEqual([1, 2, 3])
+  })
+
+  it('keeps only matching lifecycle states otherwise', () => {
+    expect(filterByState(entries, 'open').map(e => e.number)).toEqual([1, 3])
+    expect(filterByState(entries, 'closed').map(e => e.number)).toEqual([2])
+  })
+
+  it('returns an empty set when no entry matches', () => {
+    expect(filterByState([], 'closed')).toEqual([])
+  })
+})
 
 describe('rankEntries', () => {
   const entries = [

@@ -2,7 +2,7 @@ import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-cli
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store';
 import type { SessionId } from '@deepseek-ai/dsh-client-connection/client';
 import type { GitHubEntry, GitHubRepoRef, GitHubSearchResult, GhPickerSettings } from '../contract.ts';
-import type { SearchErrorKind } from './search.ts';
+import { type SearchErrorKind } from './search.ts';
 import type { NS, GhPickerKey } from './locales.ts';
 /** The locale key of the hint row for one search failure kind. */
 export declare const ERROR_HINT_KEY: Record<SearchErrorKind, GhPickerKey>;

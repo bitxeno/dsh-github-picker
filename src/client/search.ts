@@ -8,6 +8,21 @@
  */
 import type { GitHubEntry } from '../contract.ts'
 
+/** The popup's state filter: every entry, or one lifecycle state only. */
+export type StateFilter = 'all' | 'open' | 'closed'
+
+/** The filter values in toggle order. */
+export const STATE_FILTERS: readonly StateFilter[] = ['all', 'open', 'closed']
+
+/** Entries whose lifecycle state matches `filter` ('all' keeps everything). */
+export function filterByState(
+  entries: readonly GitHubEntry[],
+  filter: StateFilter,
+): readonly GitHubEntry[] {
+  if (filter === 'all') return [...entries]
+  return entries.filter(entry => entry.state === filter)
+}
+
 /** All entries matching `query`, ranked (ties by number desc, then title). */
 export function rankEntries(
   entries: readonly GitHubEntry[],

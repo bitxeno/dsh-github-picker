@@ -9,6 +9,18 @@ import { RESULT_TTL_MS } from '../src/client/cache.ts'
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
+// jsdom here ships without localStorage; the persistence tests need one.
+if (typeof localStorage === 'undefined') {
+  const store = new Map<string, string>()
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => { store.set(key, value) },
+      removeItem: (key: string) => { store.delete(key) },
+    },
+  })
+}
+
 const repo: GitHubRepoRef = { owner: 'bitxeno', name: 'atvloadly' }
 
 function entry(number: number, over: Partial<Parameters<typeof pickText>[0]> = {}) {
@@ -80,7 +92,18 @@ const searchInput = (): HTMLInputElement => {
   return input
 }
 
-const rowButtons = (): HTMLButtonElement[] => [...container.querySelectorAll('button')].slice(1)
+const rowButtons = (): HTMLButtonElement[] =>
+  [...container.querySelectorAll('button')].filter((button) => button.dataset.clear === undefined).slice(1)
+
+/** Change the state-filter dropdown like a user selection would. */
+async function pickFilter(value: string): Promise<void> {
+  const select = container.querySelector('select')
+  if (select === null) throw new Error('no filter select rendered')
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set?.call(select, value)
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+}
 
 /** Scroll the list to the bottom (jsdom needs fake scroll metrics). */
 async function scrollList(): Promise<HTMLDivElement | undefined> {
@@ -153,7 +176,7 @@ describe('opening the popup', () => {
     expect(search).toHaveBeenCalledWith('', 1, 's1', expect.any(AbortSignal))
     expect(container.textContent).toContain('picker.loading')
     await act(async () => { resolveSearch(result()) })
-    expect(container.querySelectorAll('button').length).toBe(2) // trigger + one row
+    expect(rowButtons().length).toBe(1) // one row
   })
 
   it('reopens from the hot cache without refetching', async () => {
@@ -190,7 +213,7 @@ describe('searching and picking', () => {
     ]))
     await render(props)
     await act(async () => { openButton().click() })
-    const titles = () => [...container.querySelectorAll('button')].slice(1).map((button) => button.textContent)
+    const titles = () => [...container.querySelectorAll('button')].filter((button) => button.getAttribute('aria-pressed') === null && button.dataset.clear === undefined).slice(1).map((button) => button.textContent)
     await typeQuery('10')
     // The number-prefix match leaves one row: #100.
     expect(titles().map((title) => title?.trim())).toEqual(['crash on login#100'])
@@ -214,7 +237,7 @@ describe('searching and picking', () => {
     search.mockResolvedValue(result(many))
     await render(props)
     await act(async () => { openButton().click() })
-    expect(container.querySelectorAll('button').length).toBe(many.length + 1)
+    expect(rowButtons().length).toBe(many.length)
   })
 
   it('does not page while the scroll is still far from the bottom', async () => {
@@ -246,7 +269,7 @@ describe('searching and picking', () => {
     await scrollList()
     await act(async () => { rejectPage2(new Error('boom')) })
     expect(search).toHaveBeenCalledTimes(2)
-    expect(container.querySelectorAll('button').length).toBe(13)
+    expect(rowButtons().length).toBe(12)
   })
 
   it('loads the next page when the list scrolls to the bottom', async () => {
@@ -258,10 +281,10 @@ describe('searching and picking', () => {
     await render(props)
     await act(async () => { openButton().click() })
     expect(search).toHaveBeenCalledWith('', 1, 's1', expect.any(AbortSignal))
-    expect(container.querySelectorAll('button').length).toBe(13)
+    expect(rowButtons().length).toBe(12)
     await scrollList()
     expect(search).toHaveBeenCalledWith('', 2, 's1', expect.any(AbortSignal))
-    expect(container.querySelectorAll('button').length).toBe(15)
+    expect(rowButtons().length).toBe(14)
     expect(rowButtons().at(-1)?.textContent).toContain('14')
   })
 
@@ -287,7 +310,7 @@ describe('searching and picking', () => {
     await scrollList()
     expect(search).toHaveBeenCalledTimes(2)
     await act(async () => { resolvePage2(result([entry(13)], false)) })
-    expect(container.querySelectorAll('button').length).toBe(14)
+    expect(rowButtons().length).toBe(13)
   })
 
   it('yields a page load once the popup closes mid-fetch', async () => {
@@ -410,7 +433,7 @@ describe('failure handling', () => {
     await act(async () => { openButton().click() })
     await act(async () => { openButton().click() })
     expect(search).toHaveBeenCalledTimes(2)
-    expect(container.querySelectorAll('button').length).toBeGreaterThan(1)
+    expect(rowButtons().length).toBeGreaterThan(0)
   })
 
   it('drops the in-flight result when the popup closes before it settles', async () => {
@@ -423,6 +446,93 @@ describe('failure handling', () => {
     await act(async () => { rejectSearch(new Error('late failure')) })
     // The superseded result must not surface as an error row.
     expect(container.textContent).not.toContain('picker.error')
+  })
+})
+
+describe('the state filter', () => {
+  it('defaults to all and filters rows by lifecycle state on click', async () => {
+    const { props, search } = harness()
+    search.mockResolvedValue(result([
+      entry(1),
+      entry(2, { state: 'closed' }),
+      entry(3, { state: 'closed', kind: 'pr', url: 'https://github.com/bitxeno/atvloadly/pull/3' }),
+    ]))
+    await render(props)
+    await act(async () => { openButton().click() })
+    expect(rowButtons().length).toBe(3)
+    // The dropdown renders next to the search input; 'all' is the default.
+    const select = container.querySelector('select')
+    expect(select?.getAttribute('aria-label')).toBe('picker.filter')
+    expect((select as HTMLSelectElement).value).toBe('all')
+    await pickFilter('open')
+    expect(rowButtons().length).toBe(1)
+    await pickFilter('closed')
+    expect(rowButtons().length).toBe(2)
+    await pickFilter('all')
+    expect(rowButtons().length).toBe(3)
+  })
+
+  it('applies the filter after local query ranking too', async () => {
+    const { props, search } = harness()
+    search.mockResolvedValue(result([
+      entry(10, { title: 'crash on login' }),
+      entry(11, { title: 'crash again', state: 'closed' }),
+    ]))
+    await render(props)
+    await act(async () => { openButton().click() })
+    await typeQuery('crash')
+    expect(rowButtons().length).toBe(2)
+    await pickFilter('open')
+    expect(rowButtons().length).toBe(1)
+    expect(rowButtons()[0].textContent).toContain('crash on login')
+  })
+
+  it('persists the chosen filter and restores it on the next mount', async () => {
+    const { props, search } = harness()
+    search.mockResolvedValue(result())
+    await render(props)
+    await act(async () => { openButton().click() })
+    await pickFilter('open')
+    expect(localStorage.getItem('github-picker:state-filter')).toBe('open')
+
+    // A fresh mount (a reloaded page) starts from the stored filter.
+    act(() => { root.unmount() })
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    const next = harness()
+    next.search.mockResolvedValue(result())
+    await render(next.props)
+    await act(async () => { openButton().click() })
+    const select = container.querySelector('select')
+    expect((select as HTMLSelectElement).value).toBe('open')
+    localStorage.removeItem('github-picker:state-filter')
+  })
+
+  it('falls back to all when the stored filter is not a valid state', async () => {
+    localStorage.setItem('github-picker:state-filter', 'bogus')
+    const { props, search } = harness()
+    search.mockResolvedValue(result())
+    await render(props)
+    await act(async () => { openButton().click() })
+    const select = container.querySelector('select')
+    expect((select as HTMLSelectElement).value).toBe('all')
+    localStorage.removeItem('github-picker:state-filter')
+  })
+
+  it('clears the query through the clear button inside the search box', async () => {
+    const { props, search } = harness()
+    search.mockResolvedValue(result())
+    await render(props)
+    await act(async () => { openButton().click() })
+    await typeQuery('crash')
+    const clear = container.querySelector<HTMLButtonElement>('button[data-clear]')
+    expect(clear).not.toBeNull()
+    expect(clear?.getAttribute('aria-label')).toBe('picker.clear')
+    await act(async () => { clear!.click() })
+    expect((container.querySelector('input') as HTMLInputElement).value).toBe('')
+    // The button hides again once the query is empty.
+    expect(container.querySelector('button[data-clear]')).toBeNull()
   })
 })
 

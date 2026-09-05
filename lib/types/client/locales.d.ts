@@ -10,6 +10,11 @@ export declare const zh: {
     nav: string;
     'picker.open': string;
     'picker.search': string;
+    'picker.clear': string;
+    'picker.filter': string;
+    'picker.filter.all': string;
+    'picker.filter.open': string;
+    'picker.filter.closed': string;
     'picker.loading': string;
     'picker.loadingMore': string;
     'picker.empty': string;
@@ -47,6 +52,11 @@ export declare const en: {
     nav: string;
     'picker.open': string;
     'picker.search': string;
+    'picker.clear': string;
+    'picker.filter': string;
+    'picker.filter.all': string;
+    'picker.filter.open': string;
+    'picker.filter.closed': string;
     'picker.loading': string;
     'picker.loadingMore': string;
     'picker.empty': string;

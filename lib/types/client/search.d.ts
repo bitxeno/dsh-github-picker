@@ -7,6 +7,12 @@
  * pages the provider returns).
  */
 import type { GitHubEntry } from '../contract.ts';
+/** The popup's state filter: every entry, or one lifecycle state only. */
+export type StateFilter = 'all' | 'open' | 'closed';
+/** The filter values in toggle order. */
+export declare const STATE_FILTERS: readonly StateFilter[];
+/** Entries whose lifecycle state matches `filter` ('all' keeps everything). */
+export declare function filterByState(entries: readonly GitHubEntry[], filter: StateFilter): readonly GitHubEntry[];
 /** All entries matching `query`, ranked (ties by number desc, then title). */
 export declare function rankEntries(entries: readonly GitHubEntry[], query: string): readonly GitHubEntry[];
 /** Search failure kinds the menu hint row can display (host-side mirror). */
