@@ -1,7 +1,7 @@
 {
   "name": "dsh-github-picker",
   "description": "GitHub issue and pull request references for the DeepSeek Harness web GUI: click the GitHub icon at the bottom-right of the input box to search the workspace repository and insert issue/PR references. Data comes from the gh CLI.",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "license": "MIT",
   "type": "module",
   "repository": {
