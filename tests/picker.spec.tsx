@@ -35,14 +35,12 @@ function harness(over: Partial<Record<string, unknown>> = {}) {
   const search = vi.fn()
   const setDraft = vi.fn()
   const props = {
-    session: { sessionId: 's1' },
-    input: { draft: 'hello' },
-    sessionId: 's1',
+    sessionId: 's1' as never,
     useSession: () => ({ sessionId: 's1' }),
     useSessions: () => ({}),
     useWorkspaces: () => ({}),
     useProjection: () => undefined,
-    useInput: (selector: (state: { draft: string }) => unknown) => selector({ draft: 'fallback draft' }),
+    useInput: (selector: (state: { draft: string }) => unknown) => selector({ draft: 'hello' }),
     inputActions: { setDraft },
     useSettings: (selector: (snapshot: GhPickerSettings) => unknown) => selector(settings),
     search,
@@ -141,7 +139,7 @@ describe('the button', () => {
 describe('opening the popup', () => {
   it('does not search without a session', async () => {
     const { props, search } = harness()
-    await render({ ...props, session: undefined })
+    await render({ ...props, sessionId: undefined })
     await act(async () => { openButton().click() })
     expect(search).not.toHaveBeenCalled()
   })
@@ -354,10 +352,19 @@ describe('searching and picking', () => {
   it('separates the pick from a draft that does not end with whitespace', async () => {
     const { props, search, setDraft } = harness()
     search.mockResolvedValue(result([entry(125)]))
-    await render({ ...props, input: { draft: 'fix' } })
+    await render({ ...props, useInput: (selector: (state: { draft: string }) => unknown) => selector({ draft: 'fix' }) })
     await act(async () => { openButton().click() })
     await act(async () => { rowButtons()[0]?.click() })
     expect(setDraft).toHaveBeenCalledWith('fix @bitxeno/atvloadly#125 ')
+  })
+
+  it('separates the pick from a draft ending in a newline', async () => {
+    const { props, search, setDraft } = harness()
+    search.mockResolvedValue(result([entry(125)]))
+    await render({ ...props, useInput: (selector: (state: { draft: string }) => unknown) => selector({ draft: 'fix\n' }) })
+    await act(async () => { openButton().click() })
+    await act(async () => { rowButtons()[0]?.click() })
+    expect(setDraft).toHaveBeenCalledWith('fix\n@bitxeno/atvloadly#125 ')
   })
 
   it('picks the URL format when configured', async () => {
@@ -369,49 +376,8 @@ describe('searching and picking', () => {
     expect(setDraft).toHaveBeenCalledWith('hello https://github.com/bitxeno/atvloadly/pull/7 ')
   })
 
-  it('falls back to the useInput hook when the owner input share is absent', async () => {
-    const { props, search, setDraft } = harness()
-    search.mockResolvedValue(result([entry(125)]))
-    await render({ ...props, input: undefined })
-    await act(async () => { openButton().click() })
-    await act(async () => { rowButtons()[0]?.click() })
-    expect(setDraft).toHaveBeenCalledWith('fallback draft @bitxeno/atvloadly#125 ')
-  })
 
-  it('survives a throwing draft read and still writes the pick text', async () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const { props, search, setDraft } = harness()
-    search.mockResolvedValue(result([entry(125)]))
-    await render({
-      ...props,
-      input: undefined,
-      useInput: () => { throw new Error('store gone') },
-    })
-    await act(async () => { openButton().click() })
-    await act(async () => { rowButtons()[0]?.click() })
-    expect(consoleError).toHaveBeenCalled()
-    expect(setDraft).toHaveBeenCalledWith('@bitxeno/atvloadly#125 ')
-    consoleError.mockRestore()
-  })
 
-  it('reads neither share when both are absent and picks bare text', async () => {
-    const { props, search, setDraft } = harness()
-    search.mockResolvedValue(result([entry(125)]))
-    await render({ ...props, input: undefined, useInput: undefined })
-    await act(async () => { openButton().click() })
-    await act(async () => { rowButtons()[0]?.click() })
-    expect(setDraft).toHaveBeenCalledWith('@bitxeno/atvloadly#125 ')
-  })
-
-  it('survives a missing inputActions face (draft write skipped)', async () => {
-    const { props, search } = harness()
-    search.mockResolvedValue(result([entry(125)]))
-    await render({ ...props, inputActions: undefined })
-    await act(async () => { openButton().click() })
-    await act(async () => { rowButtons()[0]?.click() })
-    // The popup still closes; no draft write was attempted.
-    expect(container.querySelector('input')).toBeNull()
-  })
 })
 
 describe('failure handling', () => {

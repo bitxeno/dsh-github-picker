@@ -15,9 +15,16 @@
 // Type-only: the ctx.remote merge and the forwarded Host-event face.
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import type {} from '@deepseek-ai/dsh-client-connection/client'
-import type { ClientContext, SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { Context } from '@deepseek-ai/cordis'
+import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
+// Type-only: the ObservableSnapshot face of the slots hooks seat.
+import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 // Type-only: the ctx.locale Context merge.
 import type {} from '@deepseek-ai/dsh-client-locale/client'
+// Type-only: the ctx.slots service (SlotRegistry lives on the renderer).
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+// Type-only: the conversation.input.right SlotMap declaration.
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 // Type-only: the ctx.settingsScope service (official settings transport).
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 // Type-only: brings the keyed settings.plugin.item SlotMap declaration (the
@@ -50,7 +57,7 @@ function wireErrorKind(code: string, message: string): SearchErrorKind {
  * Compose the GitHub picker surface.
  * @param ctx - client root context.
  */
-export function apply(ctx: ClientContext): void {
+export function apply(ctx: Context): void {
   adoptStyles()
   const t = ctx.locale.bind(NS)
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-github-picker: dictionaries')
@@ -94,7 +101,7 @@ export function apply(ctx: ClientContext): void {
   // The reserved `hooks` compartment must hold HostObservable sources — the
   // slot system binds them into `use<Name>` selector hooks and REMOVES them
   // from the component props (the dsh-at-file `hooks: { scope }` pattern).
-  const settingsSnapshot: import('@deepseek-ai/dsh-client-runtime/client').ObservableSnapshot<GhPickerSettings> = {
+  const settingsSnapshot: ObservableSnapshot<GhPickerSettings> = {
     getSnapshot: () => ghScope.getSnapshot().value ?? { insertFormat: 'ref' },
     subscribe: listener => ghScope.subscribe(listener),
   }

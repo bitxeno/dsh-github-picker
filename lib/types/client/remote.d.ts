@@ -5,7 +5,7 @@
  * browser bundle and the host manifest stay on one wire definition.
  */
 import type { RemoteResult, TypertRemoteContribution } from '@deepseek-ai/dsh-typert-protocol';
-import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client';
+import type { SessionId } from '@deepseek-ai/dsh-client-connection/client';
 import type { GhAuthStatus, GitHubSearchResult } from '../contract.ts';
 /** The githubPicker Remote namespace's client contribution. */
 export declare const GH_PICKER_REMOTE: TypertRemoteContribution;

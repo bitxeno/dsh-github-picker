@@ -15,11 +15,15 @@
  * renders as one localized hint row instead of a silent close. The control
  * is always mounted (the plugin has no enable switch).
  */
-// Type-only: brings the conversation slot declarations and kit into the program.
+// Type-only: brings the conversation slot declarations, the session
+// standard kit (sessionId / useInput / inputActions), and the renderer's
+// ctx.slots service into the program.
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { ObservableSnapshot, SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
+import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
 import type { GitHubEntry, GitHubRepoRef, GitHubSearchResult, GhPickerSettings } from '../contract.ts'
 import type { SearchErrorKind } from './search.ts'
 import { rankEntries } from './search.ts'
@@ -163,8 +167,9 @@ export function pickText(entry: GitHubEntry, repo: GitHubRepoRef, settings: GhPi
 
 /** The composer picker control: the icon button and its searchable popup. */
 export function GhPickerButton(props: PickerProps): React.ReactElement {
-  const { useSettings, search, t } = props
+  const { useSettings, useInput, inputActions, search, t } = props
   const settings = useSettings(snapshot => snapshot)
+  const input = useInput(snapshot => snapshot)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [loadState, setLoadState] = useState<LoadState>({ phase: 'idle' })
@@ -174,7 +179,7 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
   const fetchingRef = useRef(false)
 
   const load = useCallback(async () => {
-    const sessionId = props.session?.sessionId
+    const sessionId = props.sessionId
     if (sessionId === undefined) return
     loadController.current?.abort()
     const controller = new AbortController()
@@ -187,10 +192,10 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
       if (controller.signal.aborted) return
       setLoadState({ phase: 'error', kind: (error as { kind?: SearchErrorKind }).kind ?? 'unknown' })
     }
-  }, [search, props.session?.sessionId])
+  }, [search, props.sessionId])
 
   const loadMore = useCallback(async () => {
-    const sessionId = props.session?.sessionId
+    const sessionId = props.sessionId
     if (sessionId === undefined || fetchingRef.current) return
     const state = loadState
     if (state.phase !== 'ready' || !state.truncated) return
@@ -211,7 +216,7 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
       setLoadingMore(false)
       fetchingRef.current = false
     }
-  }, [loadState, search, props.session?.sessionId])
+  }, [loadState, search, props.sessionId])
 
   const handleScroll = (event: React.UIEvent<HTMLDivElement>): void => {
     const el = event.currentTarget
@@ -238,21 +243,12 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
   }
 
   const pick = (entry: GitHubEntry, repo: GitHubRepoRef) => {
-    let draft = ''
-    try {
-      if (typeof props.input?.draft === 'string') {
-        draft = props.input.draft
-      } else if (typeof props.useInput === 'function') {
-        draft = props.useInput((snapshot) => snapshot).draft
-      }
-    } catch (cause) {
-      console.error('[dsh-github-picker] reading the draft failed:', cause)
-    }
+    // The draft comes from the input machine hook seat (read at render);
+    // writes go ONLY through inputActions.setDraft (full next draft) — both
+    // are framework-guaranteed members of the session kit for this slot.
+    const draft = input.draft
     const separator = draft === '' || draft.endsWith(' ') || draft.endsWith('\n') ? '' : ' '
-    const next = `${draft}${separator}${pickText(entry, repo, settings)}`
-    if (typeof props.inputActions?.setDraft === 'function') {
-      props.inputActions.setDraft(next)
-    }
+    inputActions.setDraft(`${draft}${separator}${pickText(entry, repo, settings)}`)
     close()
     setQuery('')
   }

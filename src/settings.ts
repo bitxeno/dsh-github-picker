@@ -9,11 +9,15 @@
  */
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
-import { settingsNamespace, type SettingsScope } from '@deepseek-ai/dsh-settings'
+import type { SettingsScope } from '@deepseek-ai/dsh-settings'
 import type { GhPickerSettings } from './contract.ts'
 
-/** The branded namespace name (the Web allowlist must list the same string). */
-export const GH_PICKER_NAMESPACE = settingsNamespace('github-picker')
+/**
+ * The namespace name as a bare string: DSH 0.1.2-alpha.2 dropped the
+ * `settingsNamespace` runtime helper and `register()` validates the namespace
+ * shape at compile time (SettingsNamespaceInput) instead.
+ */
+export const GH_PICKER_NAMESPACE = 'github-picker'
 
 /** Schemastery schema of the `github-picker` namespace section. */
 export const GhPickerSettingsSchema: z<GhPickerSettings> = z.object({

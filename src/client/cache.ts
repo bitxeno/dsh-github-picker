@@ -6,7 +6,7 @@
  * session id plus the exact query, so the menu can serve previous results
  * while a new query settles.
  */
-import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
 import type { GitHubSearchResult } from '../contract.ts'
 
 /** How long one settled result stays hot before the next keystroke refetches. */
