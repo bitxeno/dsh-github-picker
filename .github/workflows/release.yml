@@ -39,19 +39,18 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
-      # The release notes come from changelogen (conventional commits since
-      # the last tag; docs/ci commits are omitted via the package.json
-      # `changelog.types` config). In CI consola (changelogen's logger) uses
-      # its basic reporter on stdout, which prefixes its (empty) log line
-      # with `[log]` — that line would otherwise land at the top of the
-      # notes. The run happens BEFORE the tag exists so the from-range still
-      # ends at the last release tag; the new version only styles the
-      # heading (`-r`).
-      - name: Generate the release notes with changelogen
+      # The release notes come from changelogithub (conventional commits since
+      # the last tag; docs/ci/etc. commits are excluded via the package.json
+      # `changelogithub.types` config). `--output` writes the notes to a file
+      # instead of creating the release itself — the tag/gh steps below own
+      # idempotency and the prerelease flag. GITHUB_TOKEN lets changelogithub
+      # resolve commit authors to GitHub usernames. The run happens BEFORE
+      # the tag exists so the from-range still ends at the last release tag.
+      - name: Generate the release notes with changelogithub
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          npx --yes changelogen@0.6.2 -r "$VERSION" 2>/dev/null > "$RUNNER_TEMP/release-notes.md"
-          sed -i '/^\[log\]/d' "$RUNNER_TEMP/release-notes.md"
+          npx --yes changelogithub --output "$RUNNER_TEMP/release-notes.md"
 
       # Pushing a tree that still carries the old version (e.g. a feature
       # commit touching package.json) must not re-release: an existing tag
