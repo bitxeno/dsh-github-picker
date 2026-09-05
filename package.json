@@ -60,6 +60,7 @@
   ],
   "scripts": {
     "build": "node build.mjs",
+    "deploy:local": "pnpm run build && rsync -a --delete lib/ ~/.dsh/profiles/web/node_modules/dsh-github-picker/lib/ && echo 'Deployed to ~/.dsh/profiles/web/node_modules/dsh-github-picker/lib — refresh the GUI to load the new client.js'",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check": "pnpm run typecheck && pnpm run test && pnpm run build"
