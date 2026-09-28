@@ -2,6 +2,8 @@
 export interface ConfigInput {
     searchTimeoutMs?: number;
     repoCacheTtl?: number;
+    /** Inserted reference format (volatile settings field; the Host never reads it). */
+    insertFormat?: 'url' | 'ref';
 }
 /** The validated configuration the runtime consumes. */
 export interface ResolvedConfig {

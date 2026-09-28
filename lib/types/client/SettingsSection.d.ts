@@ -15,7 +15,12 @@ export interface SettingsSectionInjected {
     update(update: GhPickerSettingsUpdate): Promise<void>;
     getGhAuthStatus(): Promise<GhAuthStatus>;
 }
-/** Full card props: runtime share + injected face + locale seat. */
-export type SettingsSectionProps = PropsRuntime<'settings.plugin.item'> & InjectFace<SettingsSectionInjected> & PropsLocale<typeof NS>;
-/** The plugin-configuration card component (official PluginCard structure). */
-export declare function GhPickerSection({ useSettings, update, getGhAuthStatus, t }: SettingsSectionProps): import("react").JSX.Element;
+/** Full card props: runtime share (view) + injected face + locale seat. */
+export type SettingsSectionProps = PropsRuntime<'plugins.item'> & InjectFace<SettingsSectionInjected> & PropsLocale<typeof NS>;
+/**
+ * The plugin-configuration card component.
+ * `view: 'summary'` is the Plugins-list one-liner; `view: 'page'` is the
+ * entry's own page (the shell draws the title/crumb, so the card renders only
+ * its body).
+ */
+export declare function GhPickerSection(props: SettingsSectionProps): string | React.JSX.Element;

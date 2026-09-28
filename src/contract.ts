@@ -127,13 +127,13 @@ export const GH_PICKER_INVOCATIONS: readonly InvocationDescriptor[] = [
         name: 'query',
         wire: 'query',
         source: 'json',
-        codec: { mode: 'strict', typeSymbol: 'string', schema: z.string() },
+        codec: { mode: 'strict', typeSymbol: 'string', create: () => z.string() },
       },
       {
         name: 'page',
         wire: 'page',
         source: 'json',
-        codec: { mode: 'strict', typeSymbol: 'number', schema: z.number().int().min(1) },
+        codec: { mode: 'strict', typeSymbol: 'number', create: () => z.number().int().min(1) },
       },
       {
         name: 'agent',
@@ -142,14 +142,14 @@ export const GH_PICKER_INVOCATIONS: readonly InvocationDescriptor[] = [
         lookup: 'agent',
         // The type symbol must equal the agent lookup provider's wire identity
         // exactly — the gateway's strict path rejects a mismatched symbol.
-        codec: { mode: 'strict', typeSymbol: '@deepseek-ai/dsh-session/types#SessionId', schema: z.string().min(1) },
+        codec: { mode: 'strict', typeSymbol: '@deepseek-ai/dsh-session/types#SessionId', create: () => z.string().min(1) },
       },
     ],
     cancellation: { parameter: 'signal' },
     result: {
       mode: 'strict',
       typeSymbol: 'dsh-github-picker#GitHubSearchResult',
-      schema: gitHubSearchResultSchema,
+      create: () => gitHubSearchResultSchema,
     },
   },
   {
@@ -162,7 +162,7 @@ export const GH_PICKER_INVOCATIONS: readonly InvocationDescriptor[] = [
     result: {
       mode: 'strict',
       typeSymbol: 'dsh-github-picker#GhAuthStatus',
-      schema: ghAuthStatusSchema,
+      create: () => ghAuthStatusSchema,
     },
   },
 ]

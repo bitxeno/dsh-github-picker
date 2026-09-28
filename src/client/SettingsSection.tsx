@@ -1,18 +1,20 @@
 /**
  * The plugin-configuration card for dsh-github-picker: the insert format and
- * the gh CLI account-connection status card. Registers into the official
- * `settings.plugin.item` slot under the `github-picker` namespace key; reads
- * and writes go through the bound settings scope (the official settings
- * transport — the plugin's own namespace is served by the Host directly, no
- * custom wire method). There is no enable switch and no result limit: the
- * picker is always on and the popup scrolls through every page the provider
- * returns. All dsh imports are type-only.
+ * the gh CLI account-connection status card. Registers into the Plugins page's
+ * `plugins.item` slot while the Host serves this entry; reads and writes go
+ * through the shared entry form (the volatile Config field — no custom wire
+ * method). There is no enable switch and no result limit: the picker is
+ * always on and the popup scrolls through every page the provider returns.
+ * All dsh imports are type-only.
  */
 import { useEffect, useState } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+// Type-only: brings the `plugins.item` SlotMap declaration (the Plugins page
+// lists one official entry per registration).
+import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type { GhAuthStatus, GhPickerSettings, GhPickerSettingsUpdate } from '../contract.ts'
-import { ChevronDown14, GitHubMarkIcon } from './icons.tsx'
+import { GitHubMarkIcon } from './icons.tsx'
 import type { NS } from './locales.ts'
 
 /**
@@ -29,8 +31,8 @@ export interface SettingsSectionInjected {
   getGhAuthStatus(): Promise<GhAuthStatus>
 }
 
-/** Full card props: runtime share + injected face + locale seat. */
-export type SettingsSectionProps = PropsRuntime<'settings.plugin.item'> & InjectFace<SettingsSectionInjected> & PropsLocale<typeof NS>
+/** Full card props: runtime share (view) + injected face + locale seat. */
+export type SettingsSectionProps = PropsRuntime<'plugins.item'> & InjectFace<SettingsSectionInjected> & PropsLocale<typeof NS>
 
 /** The gh account-connection card's live state. */
 type AuthCardState =
@@ -38,12 +40,23 @@ type AuthCardState =
   | { readonly phase: 'ready' }
   | { readonly phase: 'error'; readonly message: string }
 
-/** The plugin-configuration card component (official PluginCard structure). */
-export function GhPickerSection({ useSettings, update, getGhAuthStatus, t }: SettingsSectionProps) {
+/**
+ * The plugin-configuration card component.
+ * `view: 'summary'` is the Plugins-list one-liner; `view: 'page'` is the
+ * entry's own page (the shell draws the title/crumb, so the card renders only
+ * its body).
+ */
+export function GhPickerSection(props: SettingsSectionProps): string | React.JSX.Element {
+  const { view, t } = props as SettingsSectionProps & { view: 'summary' | 'page' }
+  if (view === 'summary') return t('settings.description')
+  return <GhPickerPage {...props} />
+}
+
+/** The entry page body (hooks live here so the summary path calls none). */
+function GhPickerPage({ useSettings, update, getGhAuthStatus, t }: SettingsSectionProps): React.JSX.Element {
   // The `hooks.settings` ObservableSnapshot arrives as the bound useSettings
   // selector hook (the slot system's reserved-hooks binding).
   const settings = useSettings(snapshot => snapshot)
-  const [open, setOpen] = useState(false)
   const [auth, setAuth] = useState<AuthCardState>({ phase: 'loading' })
   const [saving, setSaving] = useState(false)
 
@@ -71,27 +84,10 @@ export function GhPickerSection({ useSettings, update, getGhAuthStatus, t }: Set
   const statusPillClass = auth.phase === 'error'
     ? 'dsh_atGh_statusPill dsh_atGh_statusPill_off'
     : 'dsh_atGh_statusPill dsh_atGh_statusPill_on'
-  const title = t('settings.title')
 
   return (
-    <section className={open ? 'dsh_atGh_card dsh_atGh_cardOpen' : 'dsh_atGh_card'}>
-      {/* The disclosure header, mirroring the official PluginCard: a button
-          that stacks the plugin title over one description line and chevron. */}
-      <button
-        type="button"
-        className="dsh_atGh_cardHeader"
-        aria-expanded={open}
-        aria-label={`${t(open ? 'settings.collapse' : 'settings.expand')}: ${title}`}
-        onClick={() => { setOpen(!open) }}
-      >
-        <span className="dsh_atGh_cardHeadText">
-          <span className="dsh_atGh_cardName">{title}</span>
-          <span className="dsh_atGh_cardDescription">{t('settings.description')}</span>
-        </span>
-        <ChevronDown14 className={open ? 'dsh_atGh_cardChevron dsh_atGh_cardChevronOpen' : 'dsh_atGh_cardChevron'} />
-      </button>
-      {open && (
-        <div className="dsh_atGh_cardBody">
+    <section className="dsh_atGh_card dsh_atGh_cardOpen">
+      <div className="dsh_atGh_cardBody">
           {/* The GitHub-branded connection card (github ↔ gh CLI ↔ Connected). */}
           <div className="dsh_atGh_connCard">
             <span className="dsh_atGh_connMark"><GitHubMarkIcon /></span>
@@ -125,8 +121,7 @@ export function GhPickerSection({ useSettings, update, getGhAuthStatus, t }: Set
             </select>
             <span>{t('settings.insertFormatDesc')}</span>
           </div>
-        </div>
-      )}
+      </div>
     </section>
   )
 }

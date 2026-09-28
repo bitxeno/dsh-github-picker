@@ -28,36 +28,23 @@ function agentWith(cwd: string | undefined): Agent {
   return { session: { header: { cwd } }, ctx: new Context() } as unknown as Agent
 }
 
-/** A settings provider stub whose value is switchable per test. */
+/** A settings provider stub for DSH >= 0.1.7 (configure-only, no register). */
 function settingsProvider(
-  read: () => GhPickerSettings,
-  register?: (namespace: unknown, schema: unknown, options: unknown) => unknown,
+  configure?: (presentation: unknown, owner?: unknown) => () => void,
 ) {
-  let patch: Partial<GhPickerSettings> = {}
   return {
-    register: register ?? (() => ({
-      get: () => ({ ...read(), ...patch }),
-      watch: () => () => {},
-      update: async (next: Partial<GhPickerSettings>) => { patch = { ...patch, ...next } },
-      replace: async () => {},
-    })),
+    configure: configure ?? (() => () => {}),
   }
-}
-
-/** Default settings the tests start from. */
-function defaultSettings(): GhPickerSettings {
-  return { insertFormat: 'ref' }
 }
 
 /** Mount the function-plugin module on a fresh context (harness test pattern). */
 async function mount(
   ctx: Context,
   config?: plugin.Config,
-  readSettings: () => GhPickerSettings = defaultSettings,
 ) {
   const registryFiber = ctx.plugin(TypertRegistry)
   await registryFiber
-  ctx.provide('settings', settingsProvider(readSettings))
+  ctx.provide('settings', settingsProvider())
   ctx.provide('agents', { roots: () => [] })
   const fiber = ctx.plugin({ inject: plugin.inject, apply: plugin.apply }, config)
   await fiber
@@ -120,27 +107,28 @@ describe('dsh-github-picker host composition', () => {
     await fiber.dispose()
   })
 
-  it('registers the github-picker settings namespace with live semantics', async () => {
-    const registrations: Array<{ namespace: unknown; options: unknown }> = []
-    const captureRegister: (namespace: unknown, schema: unknown, options: unknown) => unknown = (namespace, _schema, options) => {
-      registrations.push({ namespace, options })
-      return {
-        get: () => defaultSettings(),
-        watch: () => () => {},
-        update: async () => {},
-        replace: async () => {},
-      }
+  it('suppresses the auto-generated settings page (custom plugins.item card)', async () => {
+    const presentations: unknown[] = []
+    const captureConfigure = (presentation: unknown): (() => void) => {
+      presentations.push(presentation)
+      return () => {}
     }
     const ctx = new Context()
     const registryFiber = ctx.plugin(TypertRegistry)
     await registryFiber
-    ctx.provide('settings', settingsProvider(defaultSettings, captureRegister))
+    ctx.provide('settings', settingsProvider(captureConfigure))
     ctx.provide('agents', { roots: () => [] })
     const fiber = ctx.plugin({ inject: plugin.inject, apply: plugin.apply })
     await fiber
-    expect(registrations.map(entry => entry.namespace)).toEqual(['github-picker'])
-    expect(registrations[0].options).toEqual({ applies: 'live' })
+    expect(presentations).toEqual([{ auto: false }])
     await fiber.dispose()
+  })
+
+  it('serves the insert format as a volatile Config field', async () => {
+    // The DSH >= 0.1.7 settings surface is the volatile Config schema itself.
+    const insertFormat = (plugin.Config as unknown as { dict: Record<string, { meta: { volatile?: boolean; default?: unknown } }> }).dict.insertFormat
+    expect(insertFormat.meta.volatile).toBe(true)
+    expect(insertFormat.meta.default).toBe('ref')
   })
 
   it('reports a missing workspace directory', async () => {

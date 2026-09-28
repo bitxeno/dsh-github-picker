@@ -1,16 +1,15 @@
 /**
  * dsh-github-picker client plugin: the browser half of the GitHub picker.
  * Mounts the githubPicker Remote namespace (search + gh auth status), the
- * official plugin-configuration card (`settings.plugin.item`, keyed on the
- * `github-picker` settings namespace), and the composer control — a
- * GitHub-mark button in the input box's right tool row
- * (`conversation.input.right` list slot, the seat next to the send button).
- * Clicking it opens a searchable popup of the workspace repository's issues
- * and pull requests; picking inserts the configured reference text through
- * the framework input machine. The insert format lives in the plugin-owned
- * settings namespace and is read and written through the official settings
- * scope (there is no enable switch — the picker is always on); the Host
- * owns all data access.
+ * plugin-configuration card (`plugins.item`, while the Host serves this
+ * entry), and the composer control — a GitHub-mark button in the input box's
+ * right tool row (`conversation.input.right` list slot, the seat next to the
+ * send button). Clicking it opens a searchable popup of the workspace
+ * repository's issues and pull requests; picking inserts the configured
+ * reference text through the framework input machine. The insert format lives
+ * in the entry's volatile Config field and is read and written through the
+ * shared config forms (there is no enable switch — the picker is always on);
+ * the Host owns all data access.
  */
 // Type-only: the ctx.remote merge and the forwarded Host-event face.
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
@@ -25,11 +24,11 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 // Type-only: the conversation.input.right SlotMap declaration.
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
-// Type-only: the ctx.settingsScope service (official settings transport).
+// Type-only: the ctx.configForms service (shared Host configuration forms).
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
-// Type-only: brings the keyed settings.plugin.item SlotMap declaration (the
-// plugin-configuration tab dispatches one card per served namespace).
-import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
+// Type-only: brings the `plugins.item` SlotMap declaration (the Plugins page
+// lists one official entry per registration).
+import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
 import { GH_PICKER_REMOTE } from './remote.ts'
 import { HashCache } from './cache.ts'
 import { classifySearchError, type SearchErrorKind } from './search.ts'
@@ -39,8 +38,15 @@ import { NS, zh, en } from './locales.ts'
 import { adoptStyles } from './styles.ts'
 import type { GhAuthStatus, GhPickerSettings, GhPickerSettingsUpdate, GitHubSearchResult } from '../contract.ts'
 
-/** Required services: the Remote face, the slot registry, locale, and the settings scope. */
-export const inject = ['remote', 'slots', 'locale', 'settingsScope']
+/**
+ * Loader entry id (cordis.patch.yml) — also the settings namespace the Host
+ * serves. Spelled here rather than imported: a client bundle must not depend
+ * on a Host module.
+ */
+export const GH_PICKER_ENTRY_ID = 'dsh-github-picker'
+
+/** Required services: the Remote face, the slot registry, locale, and the shared config forms. */
+export const inject = ['remote', 'slots', 'locale', 'configForms']
 
 /** The mounted githubPicker namespace service's callable face. */
 interface GhPickerFace {
@@ -62,11 +68,10 @@ export function apply(ctx: Context): void {
   const t = ctx.locale.bind(NS)
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-github-picker: dictionaries')
 
-  // The official settings transport: the bound scope directly mirrors the
-  // Host's `github-picker` namespace (registered in settings.ts). The card
-  // writes through scope.set (revision-fenced); the composer picker reads
-  // the same section for its insert format.
-  const ghScope = ctx.settingsScope.bind<GhPickerSettings>({ namespace: 'github-picker' })
+  // The shared entry form: the Host serves the volatile `insertFormat` Config
+  // field under this entry id. Reads ride the shared describe mirror; writes
+  // carry the latest known revision and fold their answers back into it.
+  const ghForm = ctx.configForms.get<GhPickerSettings>(GH_PICKER_ENTRY_ID)
 
   let remote: GhPickerFace | undefined
 
@@ -96,14 +101,14 @@ export function apply(ctx: Context): void {
 
   // The shared settings snapshot (one source of truth for the settings card
   // and the composer control; both bind it through the slots hooks seat).
-  // The scope starts 'loading' (value undefined) until the first accepted
+  // The form starts 'loading' (value undefined) until the first accepted
   // Host section, so the adapter falls back to the schema default.
   // The reserved `hooks` compartment must hold HostObservable sources — the
   // slot system binds them into `use<Name>` selector hooks and REMOVES them
   // from the component props (the dsh-at-file `hooks: { scope }` pattern).
   const settingsSnapshot: ObservableSnapshot<GhPickerSettings> = {
-    getSnapshot: () => ghScope.getSnapshot().value ?? { insertFormat: 'ref' },
-    subscribe: listener => ghScope.subscribe(listener),
+    getSnapshot: () => ghForm.getSnapshot().value ?? { insertFormat: 'ref' },
+    subscribe: listener => ghForm.subscribe(listener),
   }
 
   // The composer control: an icon in the input box's right tool row. Clicking
@@ -126,17 +131,19 @@ export function apply(ctx: Context): void {
     return dispose
   }, 'dsh-github-picker: composer input slot')
 
-  // The official plugin-configuration card (insert format + the gh
-  // account-connection card). The tab pairs this keyed registration with the
-  // host-served `github-picker` namespace; the card's `update` writes the
-  // insert format straight through the bound settings scope.
-  ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
-    name: 'settings.plugin.item',
-    key: 'github-picker',
+  // The Plugins-page card (insert format + the gh account-connection card).
+  // Registered while the Host serves this entry, so a deployment without the
+  // plugin shows no trace of it. The card's `update` writes the insert format
+  // through the shared entry form; `view: 'summary'` is the list one-liner.
+  ctx.effect(() => ctx.configForms.whileServed([GH_PICKER_ENTRY_ID], () => ctx.slots.inject('plugins.item', () => ctx.slots.register({
+    name: 'plugins.item',
+    id: 'github-picker',
+    order: 50,
+    label: () => t('settings.title'),
     locale: NS,
     inject: (): SettingsSectionInjected => ({
       hooks: { settings: settingsSnapshot },
-      update: (update: GhPickerSettingsUpdate) => ghScope.set(update.field, update.value),
+      update: async (update: GhPickerSettingsUpdate) => { await ghForm.set(update.field, update.value) },
       getGhAuthStatus: async () => {
         if (remote === undefined) throw new Error('dsh-github-picker: the githubPicker Remote is not mounted')
         const result = await remote.getGhAuthStatus()
@@ -144,7 +151,7 @@ export function apply(ctx: Context): void {
         return result.value
       },
     }),
-  }, GhPickerSection))
+  }, GhPickerSection))), 'dsh-github-picker: plugins item')
 
   // Reconnect may have rebuilt the host: the cache dies with it.
   ctx.on('connection/reset', () => {

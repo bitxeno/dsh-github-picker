@@ -1,8 +1,8 @@
-/** The settings.plugin.item card: disclosure, the insert-format select, and
- * the gh account-connection status. The card follows the official plugin
- * cards: collapsed by default behind a disclosure header, controls inside. */
+/** The plugins.item card: summary one-liner, the insert-format select, and
+ * the gh account-connection status. The Plugins shell draws the title/crumb;
+ * `view: 'summary'` is the list one-liner and `view: 'page'` is the entry body. */
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRoot, type Root } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
 import { GhPickerSection, type SettingsSectionProps } from '../src/client/SettingsSection.tsx'
@@ -20,6 +20,7 @@ function harness(over: Partial<Record<string, unknown>> = {}) {
   const update = vi.fn<(_: GhPickerSettingsUpdate) => Promise<void>>().mockResolvedValue(undefined)
   const getGhAuthStatus = vi.fn<(params?: unknown) => Promise<GhAuthStatus>>().mockResolvedValue({ accounts: [] })
   const props = {
+    view: 'page',
     useSettings: (selector: (snapshot: GhPickerSettings) => unknown) => selector(settings),
     update,
     getGhAuthStatus,
@@ -47,12 +48,6 @@ async function render(props: SettingsSectionProps): Promise<void> {
   await act(async () => { root.render(<GhPickerSection {...props} />) })
 }
 
-const header = (): HTMLButtonElement => {
-  const button = container.querySelector('button')
-  if (button === null) throw new Error('no header button rendered')
-  return button
-}
-
 const select = (): HTMLSelectElement => {
   const field = container.querySelector('select')
   if (field === null) throw new Error('no insert-format select rendered')
@@ -60,46 +55,29 @@ const select = (): HTMLSelectElement => {
 }
 
 describe('the settings card', () => {
-  it('renders collapsed: header with title, description, and closed chevron', async () => {
-    const { props } = harness()
+  it('renders the summary one-liner without mounting the page', async () => {
+    const { getGhAuthStatus } = harness({ view: 'summary' })
+    const props = harness({ view: 'summary' }).props
     await render(props)
-    const button = header()
-    expect(button.getAttribute('aria-expanded')).toBe('false')
-    expect(button.getAttribute('aria-label')).toBe('settings.expand: settings.title')
-    expect(button.textContent).toContain('settings.title')
-    expect(button.textContent).toContain('settings.description')
-    const chevron = button.querySelector('svg.dsh_atGh_cardChevron')
-    expect(chevron).not.toBeNull()
-    expect(button.querySelector('svg.dsh_atGh_cardChevronOpen')).toBeNull()
-    // The controls stay out of the tree while collapsed.
+    expect(container.textContent).toContain('settings.description')
     expect(container.querySelector('select')).toBeNull()
+    expect(getGhAuthStatus).not.toHaveBeenCalled()
   })
 
-  it('discloses the controls on click and collapses again', async () => {
+  it('renders the page body with the connection card and the select', async () => {
     const { getGhAuthStatus, props } = harness()
     getGhAuthStatus.mockResolvedValue({ accounts: [] })
     await render(props)
-    await act(async () => { header().click() })
-    expect(header().getAttribute('aria-expanded')).toBe('true')
-    expect(header().getAttribute('aria-label')).toBe('settings.collapse: settings.title')
-    expect(header().querySelector('svg.dsh_atGh_cardChevronOpen')).not.toBeNull()
-    // The connection card appears with the controls, then resolves to the
-    // not-connected pill when the auth probe reports no accounts.
     expect(container.querySelector('.dsh_atGh_connCard')).not.toBeNull()
     await act(async () => { await Promise.resolve() })
     expect(container.textContent).toContain('settings.authStatus.notConnected')
     expect(container.textContent).toContain('settings.authStatus.none')
-    const insert = select()
-    expect(insert.value).toBe('ref')
-    await act(async () => { header().click() })
-    expect(header().getAttribute('aria-expanded')).toBe('false')
-    expect(container.querySelector('select')).toBeNull()
+    expect(select().value).toBe('ref')
   })
 
   it('writes the insert format through update on change', async () => {
     const { update, props } = harness()
     await render(props)
-    await act(async () => { header().click() })
     await act(async () => {
       const insert = select()
       Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set?.call(insert, 'url')
@@ -113,7 +91,6 @@ describe('the settings card', () => {
     const { getGhAuthStatus, props } = harness()
     getGhAuthStatus.mockReturnValue(new Promise(resolve => { resolveStatus = resolve }))
     await render(props)
-    await act(async () => { header().click() })
     expect(container.textContent).toContain('settings.authStatus.loading')
     await act(async () => { resolveStatus({ accounts: [{ host: 'github.com', login: 'bitxeno', active: true, scopes: 'repo' }] }) })
     expect(container.textContent).toContain('settings.authStatus.connected')
@@ -123,7 +100,6 @@ describe('the settings card', () => {
     const { getGhAuthStatus, props } = harness()
     getGhAuthStatus.mockRejectedValue(new Error('boom'))
     await render(props)
-    await act(async () => { header().click() })
     await act(async () => { await Promise.resolve() })
     expect(container.textContent).toContain('settings.authStatus.notConnected')
     expect(container.textContent).toContain('settings.authStatus.failed')

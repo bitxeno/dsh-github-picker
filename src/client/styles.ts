@@ -13,10 +13,9 @@ export const STYLE_ID = 'dsh-github-picker-style'
 
 /** The injected stylesheet text. */
 export const cssText = `
-/* The plugin card, matching the official settings.plugin.item PluginCard
-   (dsh-client-ui-settings-plugins): a bordered card whose header is a
-   disclosure button; the open card deepens its background and rotates the
-   chevron, and the body is inset with a top divider. */
+/* The plugin card, matching the official plugins.item card
+   (the Plugins page draws the title/crumb; the entry renders only its body):
+   a bordered card whose body is inset. */
 .dsh_atGh_card {
   border: 1px solid var(--dsw-alias-border-l2);
   background: var(--dsw-alias-bg-layer-3);
