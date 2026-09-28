@@ -123,15 +123,31 @@ const searchRowStyle = {
   margin: '8px',
 } as const
 
-const searchStyle = {
-  boxSizing: 'border-box',
-  width: '100%',
+// One joined control: the outer group owns the single border, radius, and
+// background, while the input and the select render borderless inside it.
+// This keeps the two halves pixel-identical (a native select otherwise paints
+// its own OS gradient and ignores the shared background/border).
+const searchGroupStyle = {
+  display: 'flex',
+  alignItems: 'stretch',
+  flex: '1 1 auto',
   minWidth: '0',
   height: '30px',
-  padding: '0 10px',
   border: '1px solid var(--dsw-alias-border-l1, rgba(128,128,128,0.3))',
-  borderRadius: '8px 0 0 8px',
+  borderRadius: '8px',
   background: 'var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.1))',
+  overflow: 'hidden',
+} as const
+
+const searchStyle = {
+  boxSizing: 'border-box',
+  flex: '1 1 auto',
+  width: '100%',
+  minWidth: '0',
+  height: '100%',
+  padding: '0 10px',
+  border: 'none',
+  background: 'transparent',
   color: 'var(--dsw-alias-label-primary, #e6ebf2)',
   fontSize: '13px',
   outline: 'none',
@@ -158,16 +174,21 @@ const clearButtonStyle = {
 const filterSelectStyle = {
   boxSizing: 'border-box',
   flex: 'none',
-  height: '30px',
-  marginLeft: '-1px',
-  padding: '0 6px',
-  border: '1px solid var(--dsw-alias-border-l1, rgba(128,128,128,0.3))',
-  borderRadius: '0 8px 8px 0',
-  background: 'var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.1))',
+  height: '100%',
+  padding: '0 22px 0 8px',
+  border: 'none',
+  borderLeft: '1px solid var(--dsw-alias-border-l1, rgba(128,128,128,0.3))',
+  borderRadius: '0',
+  background: 'transparent',
+  backgroundImage: 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\' viewBox=\'0 0 10 6\'><path d=\'M1 1l4 4 4-4\' stroke=\'%238a94a6\' stroke-width=\'1.5\' fill=\'none\' stroke-linecap=\'round\' stroke-linejoin=\'round\'/></svg>")',
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'right 7px center',
   color: 'var(--dsw-alias-label-primary, #e6ebf2)',
-  fontSize: '12px',
+  fontSize: '13px',
   outline: 'none',
   cursor: 'pointer',
+  appearance: 'none',
+  WebkitAppearance: 'none',
 } as const
 
 const listStyle = {
@@ -364,7 +385,8 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
       {open && (
         <div style={popoverStyle}>
           <div style={searchRowStyle}>
-            <div style={{ position: 'relative', flex: '1 1 auto', minWidth: '0' }}>
+            <div style={searchGroupStyle}>
+            <div style={{ position: 'relative', flex: '1 1 auto', minWidth: '0', display: 'flex' }}>
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
@@ -401,6 +423,7 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
                 </option>
               ))}
             </select>
+            </div>
           </div>
           {loadState.phase === 'loading' && (
             <div style={statusStyle}>{t('picker.loading')}</div>
