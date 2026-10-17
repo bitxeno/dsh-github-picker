@@ -33,7 +33,13 @@ src/client/         browser half, served as the single file /plugins/dsh-github-
                     plain sibling (absolute, bottom: calc(100% + 8px), right: 0). Opens a
                     searchable list from the host search (12 per page; scrolling to the
                     bottom fetches the next page), filters locally via search.ts,
-                    inserts via inputActions.setDraft, failure hint row (localized, unpickable)
+                    inserts via inputActions.setDraft, failure hint row (localized, unpickable).
+                    Hovering a row reveals a trailing external-link button (a sibling of the
+                    row button inside a relative wrapper — never a nested button) that opens
+                    the entry's GitHub URL in a new tab; it does not pick or close the popup.
+                    The button overlays the row's right edge where the issue number sits, so
+                    on hover the number is hidden in place (visibility, keeping its slot to
+                    avoid a height shift) and the icon takes its position.
   SettingsSection.tsx  the settings.plugin.item card (keyed 'github-picker'): the gh
                     connection card (via gh CLI) + the insert-format select, reading and
                     writing the namespace through the bound settings scope. The card
@@ -48,7 +54,8 @@ src/client/         browser half, served as the single file /plugins/dsh-github-
   cache.ts          per-session result cache (TTL, shared in-flight, superseded-signal yield)
   icons.tsx         GitHub octicon set: issue open/closed, PR open/draft/closed/merged,
                     alert (hint row), the GitHub mark (connection card + the composer
-                    button), and the 14px disclosure chevron of the official plugin cards
+                    button), the external-link glyph (row hover link), and the 14px
+                    disclosure chevron of the official plugin cards
   locales.ts        zh (product copy) / en dictionaries, NS = 'github-picker'. Picker error copy
                     (`picker.error.*`) + settings copy (title 'GitHub 引用', the card
                     description, expand/collapse, insert format,

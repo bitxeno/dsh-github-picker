@@ -9,6 +9,7 @@
 export declare const zh: {
     nav: string;
     'picker.open': string;
+    'picker.openLink': string;
     'picker.search': string;
     'picker.clear': string;
     'picker.filter': string;
@@ -51,6 +52,7 @@ export type GhPickerKey = keyof typeof zh;
 export declare const en: {
     nav: string;
     'picker.open': string;
+    'picker.openLink': string;
     'picker.search': string;
     'picker.clear': string;
     'picker.filter': string;

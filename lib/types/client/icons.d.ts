@@ -30,3 +30,5 @@ export declare function ghIcon(entry: Pick<GitHubEntry, 'kind' | 'state' | 'merg
 export declare function GitHubMarkIcon(): ReactElement;
 /** The failure-hint icon: a small gray alert triangle. */
 export declare function AlertIcon(): ReactElement;
+/** The row's hover link glyph: a small, muted external-link octicon. */
+export declare function ExternalLinkIcon(): ReactElement;

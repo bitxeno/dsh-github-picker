@@ -1,7 +1,7 @@
 /** GitHub octicon state icons for the @ menu candidates. */
 import { describe, expect, it } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AlertIcon, GitHubMarkIcon, ghIcon } from '../src/client/icons.tsx'
+import { AlertIcon, ExternalLinkIcon, GitHubMarkIcon, ghIcon } from '../src/client/icons.tsx'
 
 describe('ghIcon', () => {
   it('renders an open issue as the green issue-opened octicon', () => {
@@ -54,5 +54,14 @@ describe('GitHubMarkIcon', () => {
     const markup = renderToStaticMarkup(GitHubMarkIcon())
     expect(markup).toContain('svg')
     expect(markup).toContain('M8 0c4.42 0 8 3.58')
+  })
+})
+
+describe('ExternalLinkIcon', () => {
+  it('renders the external-link glyph for the row hover link', () => {
+    const markup = renderToStaticMarkup(ExternalLinkIcon())
+    expect(markup).toContain('svg')
+    expect(markup).toContain('currentColor')
+    expect(markup).toContain('M3.75 2h3.5')
   })
 })

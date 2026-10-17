@@ -26,7 +26,7 @@ import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
 import type { GitHubEntry, GitHubRepoRef, GitHubSearchResult, GhPickerSettings } from '../contract.ts'
 import { rankEntries, filterByState, STATE_FILTERS, type SearchErrorKind, type StateFilter } from './search.ts'
-import { AlertIcon, GitHubMarkIcon, ghIcon } from './icons.tsx'
+import { AlertIcon, ExternalLinkIcon, GitHubMarkIcon, ghIcon } from './icons.tsx'
 import type { NS, GhPickerKey } from './locales.ts'
 import { RESULT_TTL_MS } from './cache.ts'
 
@@ -214,6 +214,40 @@ const itemStyle = {
   textAlign: 'left',
 } as const
 
+// The row and its trailing link button are siblings inside this relative
+// wrapper: the link overlays the row's right edge on hover without being a
+// descendant of the row's <button> (nested buttons are invalid and would make
+// the click ambiguous). The row keeps its full width; the link sits on top.
+const itemRowStyle = {
+  position: 'relative',
+  display: 'flex',
+} as const
+
+// Hover-only "open on GitHub" affordance, pinned over the row's right edge —
+// exactly where the issue number sits. On hover the number is hidden (its
+// slot is kept so the row height does not shift) and this button takes its
+// place, so the original number position is untouched when not hovering.
+// `pointerEvents` is toggled alongside opacity so the invisible button never
+// intercepts clicks when the row is not hovered.
+const linkButtonStyle = {
+  position: 'absolute',
+  top: '50%',
+  right: '4px',
+  transform: 'translateY(-50%)',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '22px',
+  height: '22px',
+  padding: '0',
+  border: 'none',
+  borderRadius: '6px',
+  background: 'var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.18))',
+  color: 'var(--dsw-alias-label-secondary, #c9d2e0)',
+  cursor: 'pointer',
+  transition: 'opacity 0.12s',
+} as const
+
 const itemTitleStyle = {
   flex: '1 1 auto',
   minWidth: '0',
@@ -259,6 +293,9 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
   const [stateFilter, setStateFilter] = useState<StateFilter>(loadStoredStateFilter)
   const [loadState, setLoadState] = useState<LoadState>({ phase: 'idle' })
   const [loadingMore, setLoadingMore] = useState(false)
+  // The number of the row currently hovered (null when none); drives the
+  // per-row trailing link button's visibility.
+  const [hovered, setHovered] = useState<number | null>(null)
   const boxRef = useRef<HTMLDivElement | null>(null)
   const loadController = useRef<AbortController | undefined>(undefined)
   const fetchingRef = useRef(false)
@@ -311,6 +348,7 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
   const close = () => {
     loadController.current?.abort()
     setOpen(false)
+    setHovered(null)
   }
 
   const toggle = () => {
@@ -336,6 +374,12 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
     inputActions.setDraft(`${draft}${separator}${pickText(entry, repo, settings)}`)
     close()
     setQuery('')
+  }
+
+  // The row's hover link opens the issue/PR on GitHub in a new tab. `noopener`
+  // + `noreferrer` keep the opened page from reaching back through window.opener.
+  const openLink = (entry: GitHubEntry) => {
+    window.open(entry.url, '_blank', 'noopener,noreferrer')
   }
 
   // Close on outside pointer-down (the shell's menu convention).
@@ -440,22 +484,42 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
                 <div style={statusStyle}>{t('picker.empty')}</div>
               ) : (
                 rows.map((entry) => (
-                  <button
+                  <div
                     key={entry.number}
-                    type="button"
-                    onClick={() => pick(entry, loadState.repo)}
-                    onMouseEnter={(event) => {
-                      event.currentTarget.style.background = 'var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.12))'
-                    }}
-                    onMouseLeave={(event) => {
-                      event.currentTarget.style.background = 'transparent'
-                    }}
-                    style={itemStyle}
+                    style={itemRowStyle}
+                    onMouseEnter={() => setHovered(entry.number)}
+                    onMouseLeave={() => setHovered(null)}
                   >
-                    <span style={{ flex: 'none', display: 'inline-flex' }}>{ghIcon(entry)}</span>
-                    <span style={itemTitleStyle}>{entry.title}</span>
-                    <span style={itemNumberStyle}>{`#${entry.number}`}</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => pick(entry, loadState.repo)}
+                      onMouseEnter={(event) => {
+                        event.currentTarget.style.background = 'var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.12))'
+                      }}
+                      onMouseLeave={(event) => {
+                        event.currentTarget.style.background = 'transparent'
+                      }}
+                      style={itemStyle}
+                    >
+                      <span style={{ flex: 'none', display: 'inline-flex' }}>{ghIcon(entry)}</span>
+                      <span style={itemTitleStyle}>{entry.title}</span>
+                      <span style={{ ...itemNumberStyle, visibility: hovered === entry.number ? 'hidden' : 'visible' }}>{`#${entry.number}`}</span>
+                    </button>
+                    <button
+                      type="button"
+                      data-open-link
+                      onClick={() => openLink(entry)}
+                      aria-label={t('picker.openLink')}
+                      title={t('picker.openLink')}
+                      style={{
+                        ...linkButtonStyle,
+                        opacity: hovered === entry.number ? 1 : 0,
+                        pointerEvents: hovered === entry.number ? 'auto' : 'none',
+                      }}
+                    >
+                      <ExternalLinkIcon />
+                    </button>
+                  </div>
                 ))
               )}
               {loadingMore && <div style={statusStyle}>{t('picker.loadingMore')}</div>}

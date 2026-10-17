@@ -93,7 +93,11 @@ const searchInput = (): HTMLInputElement => {
 }
 
 const rowButtons = (): HTMLButtonElement[] =>
-  [...container.querySelectorAll('button')].filter((button) => button.dataset.clear === undefined).slice(1)
+  [...container.querySelectorAll('button')].filter((button) => button.dataset.clear === undefined && button.dataset.openLink === undefined).slice(1)
+
+/** The hover-only "open on GitHub" link button of one row. */
+const linkButtons = (): HTMLButtonElement[] =>
+  [...container.querySelectorAll<HTMLButtonElement>('button[data-open-link]')]
 
 /** Change the state-filter dropdown like a user selection would. */
 async function pickFilter(value: string): Promise<void> {
@@ -107,7 +111,9 @@ async function pickFilter(value: string): Promise<void> {
 
 /** Scroll the list to the bottom (jsdom needs fake scroll metrics). */
 async function scrollList(): Promise<HTMLDivElement | undefined> {
-  const list = rowButtons()[0]?.parentElement
+  // The row button sits inside its relative wrapper; the scrollable list is
+  // the wrapper's parent.
+  const list = rowButtons()[0]?.parentElement?.parentElement
   if (list === undefined) throw new Error('no list rendered')
   Object.defineProperties(list, {
     scrollTop: { value: 500, configurable: true },
@@ -213,7 +219,7 @@ describe('searching and picking', () => {
     ]))
     await render(props)
     await act(async () => { openButton().click() })
-    const titles = () => [...container.querySelectorAll('button')].filter((button) => button.getAttribute('aria-pressed') === null && button.dataset.clear === undefined).slice(1).map((button) => button.textContent)
+    const titles = () => [...container.querySelectorAll('button')].filter((button) => button.getAttribute('aria-pressed') === null && button.dataset.clear === undefined && button.dataset.openLink === undefined).slice(1).map((button) => button.textContent)
     await typeQuery('10')
     // The number-prefix match leaves one row: #100.
     expect(titles().map((title) => title?.trim())).toEqual(['crash on login#100'])
@@ -246,7 +252,7 @@ describe('searching and picking', () => {
     search.mockResolvedValue(result(firstPage, true))
     await render(props)
     await act(async () => { openButton().click() })
-    const list = rowButtons()[0]?.parentElement
+    const list = rowButtons()[0]?.parentElement?.parentElement
     if (list === undefined) throw new Error('no list rendered')
     Object.defineProperties(list, {
       scrollTop: { value: 0, configurable: true },
@@ -401,6 +407,53 @@ describe('searching and picking', () => {
 
 
 
+})
+
+describe('opening links', () => {
+  it('reveals the open-link button only while its row is hovered', async () => {
+    const { props, search } = harness()
+    search.mockResolvedValue(result([entry(125)]))
+    await render(props)
+    await act(async () => { openButton().click() })
+    const link = linkButtons()[0]
+    if (link === undefined) throw new Error('no link button rendered')
+    // Hidden (and click-through) until the row is hovered.
+    expect(link.style.opacity).toBe('0')
+    expect(link.style.pointerEvents).toBe('none')
+    const row = link.parentElement
+    if (row === null) throw new Error('no row wrapper')
+    // The issue number sits in the link's place and is visible while idle.
+    const number = [...row.querySelectorAll('span')].find((span) => span.textContent === '#125')
+    if (number === undefined) throw new Error('no number span')
+    expect(number.style.visibility).toBe('visible')
+    await act(async () => { row.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, relatedTarget: null })) })
+    expect(link.style.opacity).toBe('1')
+    expect(link.style.pointerEvents).toBe('auto')
+    // Hovering hides the number in place (its slot is kept, no layout shift).
+    expect(number.style.visibility).toBe('hidden')
+    await act(async () => { row.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body })) })
+    expect(link.style.opacity).toBe('0')
+    expect(link.style.pointerEvents).toBe('none')
+    expect(number.style.visibility).toBe('visible')
+  })
+
+  it('opens the entry URL in a new tab without picking it or closing the popup', async () => {
+    const { props, search, setDraft } = harness()
+    search.mockResolvedValue(result([entry(125)]))
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+    await render(props)
+    await act(async () => { openButton().click() })
+    const link = linkButtons()[0]
+    if (link === undefined) throw new Error('no link button rendered')
+    expect(link.getAttribute('aria-label')).toBe('picker.openLink')
+    await act(async () => { link.click() })
+    expect(open).toHaveBeenCalledWith('https://github.com/bitxeno/atvloadly/issues/125', '_blank', 'noopener,noreferrer')
+    // The click did not fall through to the row's pick handler, and the popup
+    // stays open (only picking closes it).
+    expect(setDraft).not.toHaveBeenCalled()
+    expect(container.querySelector('input')).not.toBeNull()
+    open.mockRestore()
+  })
 })
 
 describe('failure handling', () => {

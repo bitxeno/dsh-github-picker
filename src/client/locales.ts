@@ -10,6 +10,7 @@
 export const zh = {
   'nav': 'GitHub 引用',
   'picker.open': '选择 GitHub Issue 或 PR',
+  'picker.openLink': '在浏览器中打开',
   'picker.search': '搜索 Issue 或 PR…',
   'picker.clear': '清除搜索',
   'picker.filter': '按状态过滤',
@@ -54,6 +55,7 @@ export type GhPickerKey = keyof typeof zh
 export const en = {
   'nav': 'GitHub Picker',
   'picker.open': 'Pick a GitHub issue or pull request',
+  'picker.openLink': 'Open in browser',
   'picker.search': 'Search issues or PRs…',
   'picker.clear': 'Clear search',
   'picker.filter': 'Filter by state',
