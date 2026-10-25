@@ -20,7 +20,7 @@ The same command updates an existing installation to the latest published versio
 
 ## Usage
 
-Click the GitHub icon in the composer's tool row. The popup lists the repository's recent issues and PRs — 12 per page, loading the next page as you scroll to the bottom, no result cap — filtered locally as you type by number or title (a number prefix ranks first). Click a row to insert the reference; Escape or a click outside closes the popup. A search failure (gh CLI missing, not authenticated, rate limited, network error, unresolved repository) renders as one localized hint row instead of a silent close.
+Click the GitHub icon in the composer's tool row. The popup lists the repository's recent issues and PRs — 12 per page, loading the next page as you scroll to the bottom, no result cap — with an open/closed filter applied to the search itself (every page contains matching entries only) and a local text filter by number or title (a number prefix ranks first). Click a row to insert the reference; Escape or a click outside closes the popup. A search failure (gh CLI missing, not authenticated, rate limited, network error, unresolved repository) renders as one localized hint row instead of a silent close.
 
 Each row shows GitHub's state icon, the title, and the `#number` tag:
 

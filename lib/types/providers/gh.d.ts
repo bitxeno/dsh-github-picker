@@ -51,7 +51,8 @@ export declare class GhProvider implements SearchProvider {
     /**
      * Search one repository page through the gh CLI.
      * @param repo - the resolved repository identity.
-     * @param query - the typed # query ('' lists recently updated).
+     * @param query - the search query ('' lists recently updated; the picker's
+     *   state filter arrives as `is:open` / `is:closed`).
      * @param page - the 1-based page of the result set.
      * @param signal - caller lifetime.
      * @returns the bounded page entries.

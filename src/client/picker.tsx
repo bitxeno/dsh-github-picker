@@ -3,9 +3,10 @@
  * the composer's right tool row (the `conversation.input.right` list slot, the
  * seat just before the send button). Clicking it opens a searchable popup of
  * the workspace repository's issues and pull requests — fetched from the host
- * search once per open (the per-session cache keeps it hot) and filtered
- * locally per keystroke. Picking one inserts the configured reference text
- * (`@owner/repo#number` or the GitHub URL) into the draft through the
+ * search once per open (the per-session cache keeps it hot). The state filter
+ * is a host search qualifier (`is:open` / `is:closed`); the text query is
+ * ranked locally per keystroke. Picking one inserts the configured reference
+ * text (`@owner/repo#number` or the GitHub URL) into the draft through the
  * framework input machine (`inputActions.setDraft`), so the Host's mention
  * scanner always marks the pick.
  *
@@ -25,7 +26,7 @@ import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-cli
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
 import type { GitHubEntry, GitHubRepoRef, GitHubSearchResult, GhPickerSettings } from '../contract.ts'
-import { rankEntries, filterByState, STATE_FILTERS, type SearchErrorKind, type StateFilter } from './search.ts'
+import { rankEntries, STATE_FILTERS, type SearchErrorKind, type StateFilter } from './search.ts'
 import { AlertIcon, ExternalLinkIcon, GitHubMarkIcon, ghIcon } from './icons.tsx'
 import type { NS, GhPickerKey } from './locales.ts'
 import { RESULT_TTL_MS } from './cache.ts'
@@ -63,6 +64,13 @@ const storeStateFilter = (filter: StateFilter): void => {
     // Storage unavailable — the filter just stays session-local.
   }
 }
+
+/**
+ * The GitHub search qualifier for one state filter ('is:open' / 'is:closed');
+ * the Host searches with it, so every fetched page contains only matching
+ * entries and paging cannot run away trying to fill a locally filtered list.
+ */
+const stateQuery = (filter: StateFilter): string => (filter === 'all' ? '' : `is:${filter}`)
 
 /** The injected business face (the reserved hooks compartment binds `useSettings`). */
 export interface PickerInjected {
@@ -300,7 +308,7 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
   const loadController = useRef<AbortController | undefined>(undefined)
   const fetchingRef = useRef(false)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (filter: StateFilter) => {
     const sessionId = props.sessionId
     if (sessionId === undefined) return
     loadController.current?.abort()
@@ -308,7 +316,7 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
     loadController.current = controller
     setLoadState({ phase: 'loading' })
     try {
-      const result = await search('', 1, sessionId, controller.signal)
+      const result = await search(stateQuery(filter), 1, sessionId, controller.signal)
       setLoadState({ phase: 'ready', entries: result.entries, repo: result.repo, page: 1, truncated: result.truncated, at: Date.now() })
     } catch (error) {
       if (controller.signal.aborted) return
@@ -327,7 +335,7 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
     loadController.current = controller
     const nextPage = state.page + 1
     try {
-      const result = await search('', nextPage, sessionId, controller.signal)
+      const result = await search(stateQuery(stateFilter), nextPage, sessionId, controller.signal)
       if (controller.signal.aborted) return
       const seen = new Set(state.entries.map((entry) => entry.number))
       const merged = [...state.entries, ...result.entries.filter((entry) => !seen.has(entry.number))]
@@ -338,7 +346,7 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
       setLoadingMore(false)
       fetchingRef.current = false
     }
-  }, [loadState, search, props.sessionId])
+  }, [loadState, search, props.sessionId, stateFilter])
 
   const handleScroll = (event: React.UIEvent<HTMLDivElement>): void => {
     const el = event.currentTarget
@@ -357,7 +365,7 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
       // a fresh list is served from the loaded state (and the cache TTL).
       const stale = loadState.phase === 'ready' && Date.now() - loadState.at >= RESULT_TTL_MS
       if (loadState.phase !== 'ready' || stale) {
-        void load()
+        void load(stateFilter)
       }
       setOpen(true)
     } else {
@@ -409,7 +417,7 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
   useEffect(() => () => { loadController.current?.abort() }, [])
 
   const rows = loadState.phase === 'ready'
-    ? filterByState(rankEntries(loadState.entries, query), stateFilter)
+    ? rankEntries(loadState.entries, query)
     : []
 
   return (
@@ -457,6 +465,7 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
                 const filter = event.target.value as StateFilter
                 setStateFilter(filter)
                 storeStateFilter(filter)
+                void load(filter)
               }}
               aria-label={t('picker.filter')}
               style={filterSelectStyle}

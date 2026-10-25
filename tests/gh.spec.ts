@@ -34,6 +34,15 @@ describe('buildQuery', () => {
   it('scopes typed queries to the repository title and body', () => {
     expect(buildQuery(repo, '  bug  ')).toBe('repo:owner/name bug in:title,body')
   })
+
+  it('keeps the recency order for the state-filter qualifier', () => {
+    expect(buildQuery(repo, 'is:open')).toBe('repo:owner/name is:open sort:updated-desc')
+    expect(buildQuery(repo, ' is:closed ')).toBe('repo:owner/name is:closed sort:updated-desc')
+  })
+
+  it('treats other qualifiers as free text', () => {
+    expect(buildQuery(repo, 'is:issue')).toBe('repo:owner/name is:issue in:title,body')
+  })
 })
 
 describe('projectItem', () => {

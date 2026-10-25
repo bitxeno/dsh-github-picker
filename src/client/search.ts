@@ -4,7 +4,9 @@
  * exact/prefix number — then falls back to title substring matching. The
  * empty query keeps the provider's recency order unchanged. Every loaded
  * entry is ranked (matches are never capped — the popup scrolls through all
- * pages the provider returns).
+ * pages the provider returns). The lifecycle state filter is NOT applied
+ * here: the picker sends it to the host as a search qualifier instead, so
+ * each fetched page already contains only matching entries.
  */
 import type { GitHubEntry } from '../contract.ts'
 
@@ -13,15 +15,6 @@ export type StateFilter = 'all' | 'open' | 'closed'
 
 /** The filter values in toggle order. */
 export const STATE_FILTERS: readonly StateFilter[] = ['all', 'open', 'closed']
-
-/** Entries whose lifecycle state matches `filter` ('all' keeps everything). */
-export function filterByState(
-  entries: readonly GitHubEntry[],
-  filter: StateFilter,
-): readonly GitHubEntry[] {
-  if (filter === 'all') return [...entries]
-  return entries.filter(entry => entry.state === filter)
-}
 
 /** All entries matching `query`, ranked (ties by number desc, then title). */
 export function rankEntries(

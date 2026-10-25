@@ -32,7 +32,8 @@ src/client/         browser half, served as the single file /plugins/dsh-github-
                     'gh-picker', order 100): a GitHub-mark button whose popup is a
                     plain sibling (absolute, bottom: calc(100% + 8px), right: 0). Opens a
                     searchable list from the host search (12 per page; scrolling to the
-                    bottom fetches the next page), filters locally via search.ts,
+                    bottom fetches the next page), state filter applied remotely as
+                    `is:open`/`is:closed`, text query ranked locally via search.ts,
                     inserts via inputActions.setDraft, failure hint row (localized, unpickable).
                     Hovering a row reveals a trailing external-link button (a sibling of the
                     row button inside a relative wrapper — never a nested button) that opens
@@ -119,8 +120,11 @@ tests/              node-env specs (11 files); jsdom pragma where a browser API 
 - The popup loads the first result page once per open (query `''`, cached per
   session AND page with a 30s TTL) and fetches the next `PICKER_PAGE_SIZE`
   page as the list scrolls toward the bottom, until the end of the result
-  set (no cap — endless scroll). Filtering happens
-  locally via `rankEntries`, so typing never stacks provider calls. A search
+  set (no cap — endless scroll). The lifecycle state filter is applied by the
+  Host search query (`is:open` / `is:closed`), so every fetched page contains
+  only matching entries and switching the filter refetches page 1 under that
+  query (the cache is query-keyed); the text query is filtered locally via
+  `rankEntries`, so typing never refetches page 1. A search
   failure is classified by `classifySearchError` and rendered as one
   localized, unpickable hint row.
 - The mention grammar (bare `#number`, `@owner/repo#number`, and issue/PR

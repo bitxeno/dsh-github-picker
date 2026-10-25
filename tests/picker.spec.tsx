@@ -66,6 +66,7 @@ let container: HTMLDivElement
 let root: Root
 
 beforeEach(() => {
+  localStorage.removeItem('github-picker:state-filter')
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -503,41 +504,78 @@ describe('failure handling', () => {
 })
 
 describe('the state filter', () => {
-  it('defaults to all and filters rows by lifecycle state on click', async () => {
+  it('applies the open/closed filter through the host search query', async () => {
     const { props, search } = harness()
-    search.mockResolvedValue(result([
-      entry(1),
-      entry(2, { state: 'closed' }),
-      entry(3, { state: 'closed', kind: 'pr', url: 'https://github.com/bitxeno/atvloadly/pull/3' }),
-    ]))
+    search.mockImplementation(async (query: string) => {
+      if (query === 'is:open') return result([entry(1), entry(3, { kind: 'pr' })])
+      if (query === 'is:closed') return result([entry(2, { state: 'closed' })])
+      return result([
+        entry(1),
+        entry(2, { state: 'closed' }),
+        entry(3, { state: 'closed', kind: 'pr', url: 'https://github.com/bitxeno/atvloadly/pull/3' }),
+      ])
+    })
     await render(props)
     await act(async () => { openButton().click() })
+    expect(search).toHaveBeenCalledWith('', 1, 's1', expect.any(AbortSignal))
     expect(rowButtons().length).toBe(3)
     // The dropdown renders next to the search input; 'all' is the default.
     const select = container.querySelector('select')
     expect(select?.getAttribute('aria-label')).toBe('picker.filter')
     expect((select as HTMLSelectElement).value).toBe('all')
+    // Each filter refetches page 1 under its own search qualifier.
     await pickFilter('open')
-    expect(rowButtons().length).toBe(1)
-    await pickFilter('closed')
+    expect(search).toHaveBeenCalledWith('is:open', 1, 's1', expect.any(AbortSignal))
     expect(rowButtons().length).toBe(2)
+    await pickFilter('closed')
+    expect(search).toHaveBeenCalledWith('is:closed', 1, 's1', expect.any(AbortSignal))
+    expect(rowButtons().length).toBe(1)
     await pickFilter('all')
+    expect(search).toHaveBeenCalledWith('', 1, 's1', expect.any(AbortSignal))
     expect(rowButtons().length).toBe(3)
   })
 
-  it('applies the filter after local query ranking too', async () => {
+  it('ranks the filtered page locally by the typed query', async () => {
     const { props, search } = harness()
-    search.mockResolvedValue(result([
-      entry(10, { title: 'crash on login' }),
-      entry(11, { title: 'crash again', state: 'closed' }),
-    ]))
+    search.mockImplementation(async (query: string) => (query === 'is:open'
+      ? result([entry(10, { title: 'crash on login' }), entry(11, { title: 'crash again' })])
+      : result([])))
     await render(props)
     await act(async () => { openButton().click() })
+    await pickFilter('open')
+    expect(rowButtons().length).toBe(2)
     await typeQuery('crash')
     expect(rowButtons().length).toBe(2)
-    await pickFilter('open')
+    await typeQuery('login')
     expect(rowButtons().length).toBe(1)
     expect(rowButtons()[0].textContent).toContain('crash on login')
+  })
+
+  it('stops when the filtered result set itself is exhausted', async () => {
+    localStorage.setItem('github-picker:state-filter', 'open')
+    const { props, search } = harness()
+    search.mockResolvedValue(result([entry(1), entry(2), entry(3)], false))
+    await render(props)
+    await act(async () => { openButton().click() })
+    expect(search).toHaveBeenCalledWith('is:open', 1, 's1', expect.any(AbortSignal))
+    expect(rowButtons().length).toBe(3)
+    // Three open entries are the whole filtered set: no extra page is fetched.
+    expect(search).toHaveBeenCalledTimes(1)
+  })
+
+  it('pages the filtered result set with the same qualifier', async () => {
+    localStorage.setItem('github-picker:state-filter', 'open')
+    const firstPage = Array.from({ length: 12 }, (_, index) => entry(index + 1))
+    const { props, search } = harness()
+    search
+      .mockImplementationOnce(async () => result(firstPage, true))
+      .mockImplementationOnce(async () => result([entry(13)], false))
+    await render(props)
+    await act(async () => { openButton().click() })
+    expect(rowButtons().length).toBe(12)
+    await scrollList()
+    expect(search).toHaveBeenCalledWith('is:open', 2, 's1', expect.any(AbortSignal))
+    expect(rowButtons().length).toBe(13)
   })
 
   it('persists the chosen filter and restores it on the next mount', async () => {

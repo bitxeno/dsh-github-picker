@@ -61,7 +61,8 @@ export class GhPickerRuntime extends TypertRemoteService {
    * Search one page of the addressed agent's repository for issues and pull
    * requests through the gh CLI. The popup loads page 1 on open and fetches
    * the next page as the list scrolls toward the bottom.
-   * @param query - the typed query ('' lists recent items).
+   * @param query - the search query ('' lists recent items; the picker's
+   *   state filter arrives as `is:open` / `is:closed`).
    * @param page - the 1-based page of the result set.
    * @param agent - the live agent resolved from the `agentId` wire field; its
    *   session header owns the workspace cwd.

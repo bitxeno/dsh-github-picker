@@ -12,7 +12,8 @@ export interface SearchProvider {
   /**
    * Search one repository page.
    * @param repo - the resolved repository identity.
-   * @param query - the typed @ query ('' lists recently updated).
+   * @param query - the search query ('' lists recently updated; the picker's
+   *   state filter arrives as `is:open` / `is:closed`).
    * @param page - the 1-based page of the result set (PICKER_PAGE_SIZE per page).
    * @param signal - caller lifetime.
    * @returns the bounded page entries (already provider-sorted).

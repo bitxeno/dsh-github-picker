@@ -73,11 +73,17 @@ export const ghCommand: GhCommand = {
   },
 }
 
+/** A qualifier-only query (the picker's `is:open` / `is:closed` state filter). */
+const STATE_QUALIFIER = /^is:(?:open|closed)$/u
+
 /** Build the `q` parameter for one search round-trip. */
 export function buildQuery(repo: GitHubRepoRef, query: string): string {
   const trimmed = query.trim()
   const repoClause = `repo:${repo.owner}/${repo.name}`
   if (trimmed === '') return `${repoClause} sort:updated-desc`
+  // The state filter narrows the whole result set, so keep the recency order
+  // (and skip `in:title,body`, which has no free-text term to scope).
+  if (STATE_QUALIFIER.test(trimmed)) return `${repoClause} ${trimmed} sort:updated-desc`
   return `${repoClause} ${trimmed} in:title,body`
 }
 
@@ -142,7 +148,8 @@ export class GhProvider implements SearchProvider {
   /**
    * Search one repository page through the gh CLI.
    * @param repo - the resolved repository identity.
-   * @param query - the typed # query ('' lists recently updated).
+   * @param query - the search query ('' lists recently updated; the picker's
+   *   state filter arrives as `is:open` / `is:closed`).
    * @param page - the 1-based page of the result set.
    * @param signal - caller lifetime.
    * @returns the bounded page entries.
