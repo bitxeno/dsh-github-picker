@@ -2,8 +2,8 @@
 
 Out-of-tree DeepSeek Harness plugin (host + Web client bundle). The harness
 checkout is not required for development on this machine: devDependencies
-are `link:` entries into the installed package tree under the npx cache
-(`/Volumes/UsbDrive/cxf/.npm/_npx/1e7f6d9597241db0/node_modules/@deepseek-ai`).
+are `link:` entries into the globally installed package tree
+(`/opt/homebrew/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai`).
 The reference recipe this repo follows is `dsh-at-file` (same directory
 level).
 
@@ -23,7 +23,7 @@ src/gh-auth.ts      reads `gh auth status --json hosts` → the account-connecti
 src/repo.ts         git remote URL parsing (https/ssh/git@ forms) + per-workspace TTL cache
 src/providers/      SearchProvider seam: gh.ts only (gh api search/issues, NDJSON). No device flow,
                     no REST-API mode, no token store, no repository override.
-src/invariant.ts    ./invariant companion (real `No runtime invariant:` reason)
+src/invariant.ts    (removed) dsh 0.2.1 dropped the runtime-invariant service
 src/client/         browser half, served as the single file /plugins/dsh-github-picker/client.js
   index.ts          apply: $mount the Remote contribution, per-session cache, the composer
                     slot registration (hooks/settings via the bound settings scope), locale,
@@ -174,9 +174,13 @@ comment. Run `pnpm exec vitest run --coverage` to see the per-file table.
 
 ## Dev environment notes
 
-- `devDependencies` are `link:` entries into the npx cache's installed
-  packages (no `../dsh` source tree on this machine). `pnpm install` after
-  cloning; the links resolve from `/Volumes/UsbDrive/cxf/.npm/_npx/...`.
+- `devDependencies` are `link:` entries into the globally installed dsh tree
+  (`/opt/homebrew/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai`);
+  no `../dsh` source tree on this machine. `pnpm install` after cloning. Since
+  dsh 0.2.1 `dsh-client-store` and `dsh-client-ui-slots` are dev-only packages
+  in the harness, so `npm i -g @deepseek-ai/dsh` no longer installs them — the
+  repo pins both to `0.2.1-rc.3` and installs them from the registry instead of
+  linking.
 - Live testing: install into the web profile
   (`~/.dsh/profiles/web/package.json` dependencies + `dsh.profile.bundles`),
   `pnpm install` there, restart `dsh web`, refresh the GUI. The plugin serves

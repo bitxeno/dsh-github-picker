@@ -51,9 +51,6 @@ importers:
       '@deepseek-ai/dsh-client-ui-slots':
         specifier: link:/opt/homebrew/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-client-ui-slots
         version: link:../../../../opt/homebrew/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-client-ui-slots
-      '@deepseek-ai/dsh-invariants':
-        specifier: link:/opt/homebrew/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-invariants
-        version: link:../../../../opt/homebrew/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-invariants
       '@deepseek-ai/dsh-llm':
         specifier: link:/opt/homebrew/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-llm
         version: link:../../../../opt/homebrew/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-llm

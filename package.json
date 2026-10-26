@@ -18,10 +18,6 @@
       "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
-    "./invariant": {
-      "types": "./lib/types/invariant.d.ts",
-      "default": "./lib/invariant.js"
-    },
     "./package.json": "./package.json"
   },
   "dsh": {
@@ -126,7 +122,6 @@
     "@deepseek-ai/dsh-agent": "link:/opt/homebrew/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-agent",
     "@deepseek-ai/dsh-typert-protocol": "link:/opt/homebrew/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-typert-protocol",
     "@deepseek-ai/dsh-typert-registry": "link:/opt/homebrew/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-typert-registry",
-    "@deepseek-ai/dsh-invariants": "link:/opt/homebrew/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-invariants",
     "@deepseek-ai/schemastery": "link:/opt/homebrew/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/schemastery",
     "@deepseek-ai/dsh-llm": "link:/opt/homebrew/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-llm",
     "@deepseek-ai/dsh-api-remotes": "link:/opt/homebrew/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-api-remotes",
