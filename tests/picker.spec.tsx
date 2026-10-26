@@ -627,6 +627,103 @@ describe('the state filter', () => {
   })
 })
 
+describe('viewport fitting', () => {
+  /** Stub the wrapper's box so the placement math sees a real anchor. */
+  function stubAnchor(top: number, left = 700): void {
+    const rect = {
+      top, left, right: left + 28, bottom: top + 28, width: 28, height: 28, x: left, y: top,
+      toJSON: () => ({}),
+    }
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(rect as DOMRect)
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    Reflect.deleteProperty(window, 'visualViewport')
+    Reflect.deleteProperty(window, 'matchMedia')
+  })
+
+  it('opens above the button when there is room above (desktop)', async () => {
+    stubAnchor(600)
+    const { props, search } = harness()
+    search.mockResolvedValue(result())
+    await render(props)
+    await act(async () => { openButton().click() })
+    const popup = container.querySelector<HTMLElement>('[data-gh-picker-popup]')
+    expect(popup?.dataset.side).toBe('above')
+    expect(popup?.style.top).toBe('auto')
+    expect(popup?.style.bottom).not.toBe('')
+  })
+
+  it('opens below the button when there is no room above', async () => {
+    stubAnchor(20)
+    const { props, search } = harness()
+    search.mockResolvedValue(result())
+    await render(props)
+    await act(async () => { openButton().click() })
+    const popup = container.querySelector<HTMLElement>('[data-gh-picker-popup]')
+    expect(popup?.dataset.side).toBe('below')
+    expect(popup?.style.top).not.toBe('')
+    expect(popup?.style.bottom).toBe('auto')
+  })
+
+  it('re-measures when the visual viewport changes', async () => {
+    stubAnchor(20)
+    const { props, search } = harness()
+    search.mockResolvedValue(result())
+    await render(props)
+    await act(async () => { openButton().click() })
+    expect(container.querySelector<HTMLElement>('[data-gh-picker-popup]')?.dataset.side).toBe('below')
+    // The keyboard opens: only 100px of viewport left, so the popup sheets.
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: {
+        offsetLeft: 0,
+        offsetTop: 0,
+        width: 400,
+        height: 100,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      },
+    })
+    await act(async () => { window.dispatchEvent(new Event('resize')) })
+    expect(container.querySelector<HTMLElement>('[data-gh-picker-popup]')?.dataset.side).toBe('sheet')
+  })
+
+  it('uses touch geometry on a coarse pointer', async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: query === '(pointer: coarse)' }),
+    })
+    const { props, search } = harness()
+    search.mockResolvedValue(result([entry(125)]))
+    await render(props)
+    await act(async () => { openButton().click() })
+    // 16px prevents iOS Safari's focus zoom.
+    expect(searchInput().style.fontSize).toBe('16px')
+    // No hover on touch: the open-link button is always reachable.
+    const link = linkButtons()[0]
+    expect(link.style.opacity).toBe('1')
+    expect(link.style.pointerEvents).toBe('auto')
+    // The number stays visible (nothing is hidden in place) and the row keeps
+    // room for the pinned link button.
+    const row = link.parentElement
+    const number = [...(row?.querySelectorAll('span') ?? [])].find((span) => span.textContent === '#125')
+    expect(number?.style.visibility).toBe('')
+    expect(rowButtons()[0]?.style.padding).toBe('10px 34px 10px 10px')
+    // A synthesized hover (a tap) must not move the link under the finger.
+    await act(async () => { row?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })) })
+    expect(link.style.opacity).toBe('1')
+    expect(number?.style.visibility).toBe('')
+    await act(async () => { row?.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body })) })
+    expect(link.style.opacity).toBe('1')
+    // The clear button also grows to a comfortable touch target.
+    await typeQuery('12')
+    const clear = container.querySelector<HTMLButtonElement>('button[data-clear]')
+    expect(clear?.style.width).toBe('22px')
+  })
+})
+
 describe('closing', () => {
   it('closes on an outside pointer-down', async () => {
     const { props, search } = harness()

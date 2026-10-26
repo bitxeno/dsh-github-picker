@@ -22,6 +22,8 @@ The same command updates an existing installation to the latest published versio
 
 Click the GitHub icon in the composer's tool row. The popup lists the repository's recent issues and PRs — 12 per page, loading the next page as you scroll to the bottom, no result cap — with an open/closed filter applied to the search itself (every page contains matching entries only) and a local text filter by number or title (a number prefix ranks first). Click a row to insert the reference; Escape or a click outside closes the popup. A search failure (gh CLI missing, not authenticated, rate limited, network error, unresolved repository) renders as one localized hint row instead of a silent close.
 
+On a phone the popup fits itself to the visible viewport (keyboard included) instead of being clipped, rows are taller with the open-in-browser button always visible, and the search field is 16px so iOS does not zoom the page in.
+
 Each row shows GitHub's state icon, the title, and the `#number` tag:
 
 | State | Icon |

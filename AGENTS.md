@@ -30,7 +30,7 @@ src/client/         browser half, served as the single file /plugins/dsh-github-
                     styles, and the settings.plugin.item card registration (keyed)
   picker.tsx        the composer control for `conversation.input.right` (list slot, id
                     'gh-picker', order 100): a GitHub-mark button whose popup is a
-                    plain sibling (absolute, bottom: calc(100% + 8px), right: 0). Opens a
+                    plain sibling (absolute, no portal). Opens a
                     searchable list from the host search (12 per page; scrolling to the
                     bottom fetches the next page), state filter applied remotely as
                     `is:open`/`is:closed`, text query ranked locally via search.ts,
@@ -41,6 +41,15 @@ src/client/         browser half, served as the single file /plugins/dsh-github-
                     The button overlays the row's right edge where the issue number sits, so
                     on hover the number is hidden in place (visibility, keeping its slot to
                     avoid a height shift) and the icon takes its position.
+                    On a coarse pointer (a phone) there is no hover: the link button is always
+                    visible with row padding reserved for it, the search field is 16px (iOS
+                    does not zoom in), rows are taller, and the popup is refitted live.
+  placement.ts      popup fitting math (pure): clamps the box into the visible viewport
+                    (visualViewport when present, so the keyboard counts) intersected with
+                    the nearest scrolling ancestor, picks the roomier side, slides back
+                    inside when the anchor is covered, and falls back to a bottom sheet when
+                    neither side has room. Also the coarse-pointer media probe and the
+                    touch top inset that keeps clear of the floating mobile menu button.
   SettingsSection.tsx  the settings.plugin.item card (keyed 'github-picker'): the gh
                     connection card (via gh CLI) + the insert-format select, reading and
                     writing the namespace through the bound settings scope. The card
@@ -61,7 +70,7 @@ src/client/         browser half, served as the single file /plugins/dsh-github-
                     (`picker.error.*`) + settings copy (title 'GitHub 引用', the card
                     description, expand/collapse, insert format,
                     auth status) — no enable-switch keys.
-tests/              node-env specs (11 files); jsdom pragma where a browser API is needed
+tests/              node-env specs (13 files); jsdom pragma where a browser API is needed
 ```
 
 ## Contracts with the harness (do not drift)
@@ -110,8 +119,9 @@ tests/              node-env specs (11 files); jsdom pragma where a browser API 
   recipe. It receives the owner InputZone (`session`, `input`), the session
   kit (`useInput`, `inputActions`), its inject face (`search` + the bound
   `useSettings` hooks seat), and the locale `t`. The popup is a plain sibling
-  of the button (`position:absolute; bottom: calc(100% + 8px); right: 0`),
-  no portal; drafts are written ONLY through `inputActions.setDraft` (full
+  of the button (absolute, no portal) whose box is fitted by `placement.ts`
+  to the visible viewport ∩ the nearest scrolling ancestor — never a fixed
+  desktop offset. Drafts are written ONLY through `inputActions.setDraft` (full
   next draft), never by touching the textarea DOM. Do not reintroduce
   trigger/overlay/keyboard-capture machinery — earlier versions implemented a
   custom `#` trigger and the standard `@` source; those files (trigger/

@@ -10,18 +10,20 @@
  * framework input machine (`inputActions.setDraft`), so the Host's mention
  * scanner always marks the pick.
  *
- * The popup is a plain sibling of the button inside a relative wrapper —
- * `position: absolute; bottom: calc(100% + 8px); right: 0` — the same
- * no-portal anchoring as the reference dsh-skill-picker. A search failure
- * renders as one localized hint row instead of a silent close. The control
- * is always mounted (the plugin has no enable switch).
+ * The popup is a plain sibling of the button inside a relative wrapper — no
+ * portal, the same anchoring as the reference dsh-skill-picker. Its box is
+ * fitted to the visual viewport by `placement.ts`: on a phone the width
+ * shrinks to the screen, and when neither side of the button has room (a
+ * landscape phone, or the keyboard up) it becomes a bottom sheet. A search
+ * failure renders as one localized hint row instead of a silent close. The
+ * control is always mounted (the plugin has no enable switch).
  */
 // Type-only: brings the conversation slot declarations, the session
 // standard kit (sessionId / useInput / inputActions), and the renderer's
 // ctx.slots service into the program.
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
@@ -30,6 +32,14 @@ import { rankEntries, STATE_FILTERS, type SearchErrorKind, type StateFilter } fr
 import { AlertIcon, ExternalLinkIcon, GitHubMarkIcon, ghIcon } from './icons.tsx'
 import type { NS, GhPickerKey } from './locales.ts'
 import { RESULT_TTL_MS } from './cache.ts'
+import {
+  TOUCH_TOP_INSET,
+  clipBoxFor,
+  computePopupPlacement,
+  prefersCoarsePointer,
+  readViewport,
+  type PopupPlacement,
+} from './placement.ts'
 
 /** The locale key of the hint row for one search failure kind. */
 export const ERROR_HINT_KEY: Record<SearchErrorKind, GhPickerKey> = {
@@ -124,6 +134,18 @@ const popoverStyle = {
   zIndex: 1000,
 } as const
 
+/** The popup's inline placement, overriding the default desktop anchoring. */
+function placementStyle(placement: PopupPlacement): CSSProperties {
+  return {
+    left: `${placement.offsetLeft}px`,
+    right: 'auto',
+    width: `${placement.width}px`,
+    maxHeight: `${placement.maxHeight}px`,
+    ...(placement.offsetTop === undefined ? {} : { top: `${placement.offsetTop}px`, bottom: 'auto' }),
+    ...(placement.offsetBottom === undefined ? {} : { bottom: `${placement.offsetBottom}px`, top: 'auto' }),
+  }
+}
+
 const searchRowStyle = {
   display: 'flex',
   alignItems: 'center',
@@ -205,6 +227,9 @@ const listStyle = {
   // scrolling past the ends of the list scrolls the conversation behind it.
   overscrollBehavior: 'contain',
   flex: 'auto',
+  // A column flex child defaults to min-height:auto, which would let the list
+  // grow past the popup's clamped height instead of scrolling inside it.
+  minHeight: '0',
   padding: '0 6px 8px',
 } as const
 
@@ -280,6 +305,17 @@ const statusStyle = {
   fontSize: '13px',
 } as const
 
+/** Row geometry for touch: taller rows and a 16px field (no iOS focus zoom). */
+const touchScale = {
+  searchFontSize: '16px',
+  searchHeight: '36px',
+  // The trailing padding keeps the issue number clear of the always-visible
+  // open-link button pinned to the row's right edge.
+  itemPadding: '10px 34px 10px 10px',
+  itemFontSize: '14px',
+  clearSize: '22px',
+} as const
+
 /**
  * The pick text for one entry under the configured insert format (stays
  * within the mention grammar the Host's pre-step scanner recognizes).
@@ -304,9 +340,49 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
   // The number of the row currently hovered (null when none); drives the
   // per-row trailing link button's visibility.
   const [hovered, setHovered] = useState<number | null>(null)
+  // Touch devices have no hover, so the open-link button is always visible
+  // and the search field grows to 16px (no iOS focus zoom).
+  const [coarse] = useState(prefersCoarsePointer)
+  // The popup's fitted box (null until the first measurement, when the
+  // default desktop anchoring applies for that one paint).
+  const [placement, setPlacement] = useState<PopupPlacement | null>(null)
   const boxRef = useRef<HTMLDivElement | null>(null)
   const loadController = useRef<AbortController | undefined>(undefined)
   const fetchingRef = useRef(false)
+
+  // Fit the popup to the visible viewport, and keep it fitted while the
+  // viewport moves (rotation, the on-screen keyboard, browser chrome).
+  useLayoutEffect(() => {
+    if (!open) {
+      setPlacement(null)
+      return
+    }
+    const measure = () => {
+      const box = boxRef.current
+      /* v8 ignore next -- the wrapper is mounted whenever the popup is open */
+      if (box === null) return
+      // An absolutely positioned popup is clipped by the nearest scrolling
+      // ancestor, so fit to that intersection rather than the viewport alone.
+      // Touch shells float their menu button over the top-left corner, so the
+      // popup keeps clear of it there.
+      setPlacement(computePopupPlacement(
+        box.getBoundingClientRect(),
+        clipBoxFor(box, readViewport(), coarse ? TOUCH_TOP_INSET : 0),
+      ))
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    window.addEventListener('scroll', measure, true)
+    const visual = window.visualViewport
+    visual?.addEventListener('resize', measure)
+    visual?.addEventListener('scroll', measure)
+    return () => {
+      window.removeEventListener('resize', measure)
+      window.removeEventListener('scroll', measure, true)
+      visual?.removeEventListener('resize', measure)
+      visual?.removeEventListener('scroll', measure)
+    }
+  }, [open])
 
   const load = useCallback(async (filter: StateFilter) => {
     const sessionId = props.sessionId
@@ -435,15 +511,23 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
         <GitHubMarkIcon />
       </button>
       {open && (
-        <div style={popoverStyle}>
+        <div
+          data-gh-picker-popup
+          data-side={placement?.side ?? 'above'}
+          style={placement === null ? popoverStyle : { ...popoverStyle, ...placementStyle(placement) }}
+        >
           <div style={searchRowStyle}>
-            <div style={searchGroupStyle}>
+            <div style={{ ...searchGroupStyle, ...(coarse ? { height: touchScale.searchHeight } : {}) }}>
             <div style={{ position: 'relative', flex: '1 1 auto', minWidth: '0', display: 'flex' }}>
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={t('picker.search')}
-                style={{ ...searchStyle, paddingRight: query === '' ? '10px' : '26px' }}
+                style={{
+                  ...searchStyle,
+                  ...(coarse ? { fontSize: touchScale.searchFontSize } : {}),
+                  paddingRight: query === '' ? '10px' : '26px',
+                }}
                 autoFocus
               />
               {query !== '' && (
@@ -453,7 +537,7 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
                   onClick={() => setQuery('')}
                   aria-label={t('picker.clear')}
                   title={t('picker.clear')}
-                  style={clearButtonStyle}
+                  style={{ ...clearButtonStyle, ...(coarse ? { width: touchScale.clearSize, height: touchScale.clearSize, lineHeight: touchScale.clearSize } : {}) }}
                 >
                   ×
                 </button>
@@ -468,7 +552,7 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
                 void load(filter)
               }}
               aria-label={t('picker.filter')}
-              style={filterSelectStyle}
+              style={{ ...filterSelectStyle, ...(coarse ? { fontSize: touchScale.searchFontSize } : {}) }}
             >
               {STATE_FILTERS.map((filter) => (
                 <option key={filter} value={filter}>
@@ -496,8 +580,8 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
                   <div
                     key={entry.number}
                     style={itemRowStyle}
-                    onMouseEnter={() => setHovered(entry.number)}
-                    onMouseLeave={() => setHovered(null)}
+                    onMouseEnter={() => { if (!coarse) setHovered(entry.number) }}
+                    onMouseLeave={() => { if (!coarse) setHovered(null) }}
                   >
                     <button
                       type="button"
@@ -508,11 +592,18 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
                       onMouseLeave={(event) => {
                         event.currentTarget.style.background = 'transparent'
                       }}
-                      style={itemStyle}
+                      style={{ ...itemStyle, ...(coarse ? { padding: touchScale.itemPadding } : {}) }}
                     >
                       <span style={{ flex: 'none', display: 'inline-flex' }}>{ghIcon(entry)}</span>
-                      <span style={itemTitleStyle}>{entry.title}</span>
-                      <span style={{ ...itemNumberStyle, visibility: hovered === entry.number ? 'hidden' : 'visible' }}>{`#${entry.number}`}</span>
+                      <span style={{ ...itemTitleStyle, ...(coarse ? { fontSize: touchScale.itemFontSize } : {}) }}>{entry.title}</span>
+                      <span
+                        style={{
+                          ...itemNumberStyle,
+                          ...(coarse
+                            ? { fontSize: touchScale.itemFontSize }
+                            : { visibility: hovered === entry.number ? 'hidden' : 'visible' }),
+                        }}
+                      >{`#${entry.number}`}</span>
                     </button>
                     <button
                       type="button"
@@ -522,8 +613,10 @@ export function GhPickerButton(props: PickerProps): React.ReactElement {
                       title={t('picker.openLink')}
                       style={{
                         ...linkButtonStyle,
-                        opacity: hovered === entry.number ? 1 : 0,
-                        pointerEvents: hovered === entry.number ? 'auto' : 'none',
+                        ...(coarse ? { width: '28px', height: '28px', opacity: 1, pointerEvents: 'auto' } : {
+                          opacity: hovered === entry.number ? 1 : 0,
+                          pointerEvents: hovered === entry.number ? 'auto' : 'none',
+                        }),
                       }}
                     >
                       <ExternalLinkIcon />
